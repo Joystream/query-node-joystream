@@ -1,0 +1,36 @@
+{
+  "name": "indexing-node-joystream",
+  "version": "0.1.0",
+  "license": "GPL-3.0",
+  "scripts": {
+    "test": "mocha test/**/*.js",
+    "lint": "tslint --project .",
+    "lintfix": "tslint --project . --fix",
+    "build": "./build.sh",
+    "dev": "nodemon --watch bin/ --watch lib/ --verbose --ext ts --exec bash -c \"yarn build && node ./build/bin/cli.js\"",
+    "start": "node ./build/bin/cli.js"
+  },
+  "bin": {
+    "js_indexer": "build/bin/cli.js"
+  },
+  "devDependencies": {
+    "@types/mocha": "^5.2.6",
+    "mocha": "^6.1.4",
+    "typescript": "^3.4.5"
+  },
+  "dependencies": {
+    "@joystream/joy-types": "file:apps/packages/joy-types/build/",
+    "@polkadot/api": "^0.77.1",
+    "@polkadot/ts": "^0.1.56",
+    "@types/node": "^12.0.0",
+    "chalk": "^2.4.2",
+    "configstore": "^4.0.0",
+    "figlet": "^1.2.1",
+    "meow": "^5.0.0",
+    "mongoose": "^5.5.7",
+    "npmlog": "^4.1.2",
+    "path": "^0.12.7",
+    "rxjs": "^6.5.2",
+    "typescript": "^3.4.5"
+  }
+}

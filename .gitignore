@@ -1,0 +1,4 @@
+build
+apps
+*.swp
+node_modules
