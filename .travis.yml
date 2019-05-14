@@ -1,0 +1,19 @@
+dist: trusty
+language: node_js
+node_js:
+    - "12"
+
+before_install:
+    # workaround for broken yarn version on travis
+    # see: https://github.com/travis-ci/travis-ci/issues/9445
+    - curl -o- -L https://yarnpkg.com/install.sh | bash
+    - export PATH="$HOME/.yarn/bin:$HOME/.config/yarn/global/node_modules/.bin:$PATH"
+
+    - yarn --version
+    - yarn global add tslint typescript
+install:
+    - git clone --depth=1 https://github.com/joystream/apps.git
+    - (cd apps; yarn install && yarn build)
+    - yarn build
+script:
+    - yarn lint
