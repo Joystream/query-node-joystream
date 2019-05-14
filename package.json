@@ -19,7 +19,7 @@
     "typescript": "^3.4.5"
   },
   "dependencies": {
-    "@joystream/joy-types": "file:apps/packages/joy-types/build/",
+    "@joystream/types": "file:apps/packages/joy-types/build/",
     "@polkadot/api": "^0.77.1",
     "@polkadot/ts": "^0.1.56",
     "@types/node": "^12.0.0",

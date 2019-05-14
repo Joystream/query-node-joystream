@@ -16,7 +16,7 @@ function banner() {
 
 // Register custom substrate types. This is required by the
 // polkadot API interface.
-import { registerJoystreamTypes } from "@joystream/joy-types/";
+import { registerJoystreamTypes } from "@joystream/types/";
 registerJoystreamTypes();
 
 (async () => {
