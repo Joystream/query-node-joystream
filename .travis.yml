@@ -12,8 +12,6 @@ before_install:
     - yarn --version
     - yarn global add tslint typescript
 install:
-    - git clone --depth=1 https://github.com/joystream/apps.git
-    - (cd apps; yarn install && yarn build)
     - yarn build
 script:
     - yarn lint
