@@ -8,8 +8,6 @@ import { App } from "../lib/App";
 
 log.level = "verbose";
 
-const DEFAULT_DB_URI = "mongodb://localhost:27017/substrateindexer";
-
 function banner() {
   log.info("cli", chalk.blue(figlet.textSync("joystream", "Speed")));
 }
@@ -21,7 +19,7 @@ registerJoystreamTypes();
 
 (async () => {
   banner();
-  await new App(DEFAULT_DB_URI).start();
+  await new App().start();
 })().catch((err) => {
   log.error("cli", err.stack);
   process.exit(1);
