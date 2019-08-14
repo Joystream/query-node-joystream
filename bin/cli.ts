@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 "use strict";
 
+import { ApiPromise, WsProvider } from "@polkadot/api";
+
 const chalk = require("chalk");
 const figlet = require("figlet");
 const log = require("npmlog");
@@ -18,9 +20,26 @@ import { registerJoystreamTypes } from "@joystream/types/";
 registerJoystreamTypes();
 
 (async () => {
-  banner();
-  await new App().start();
+	banner();
+
+	// FIXME! Allow CLI-argument config for this
+	const api = await ApiPromise.create({
+		provider: new WsProvider("ws://127.0.0.1:9944"),
+		types: {
+			Category: {},
+			CategoryId: {},
+			IPNSIdentity: {},
+			InputValidationLengthConstraint: {},
+			Post: {},
+			PostId: {},
+			Thread: {},
+			ThreadId: {},
+			Url: {},
+		},
+	});
+
+	await new App(api).start();
 })().catch((err) => {
-  log.error("cli", err.stack);
-  process.exit(1);
+	log.error("cli", err.stack);
+	process.exit(1);
 });
