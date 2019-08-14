@@ -10,7 +10,6 @@ import { TypeRegistry } from '@polkadot/types/codec/typeRegistry'
 import { stringLowerFirst, stringUpperFirst } from '@polkadot/util'
 
 import { default as U128 } from '@polkadot/types/primitive/U128';
-import { default as Moment } from '@polkadot/types/primitive/Moment';
 
 enum StorageType {
 	Plain     = 'PlainType',
@@ -30,6 +29,16 @@ class ModuleDescriptor {
 
 	constructor() {
 		this.storage = {}
+	}
+
+	public storageByAPIName(apiName:string):StorageDescriptor {
+		for (let k in this.storage) {
+			if (this.storage[k].APIName == apiName) {
+				return this.storage[k]
+			}
+		}
+
+		throw new Error(`APIName ${apiName} not found`)
 	}
 }
 
@@ -192,8 +201,8 @@ class GraphQLServerSchemaBuilder<TMetadataVersion extends MetadataInterface = Me
 		let codec = this.codecs[type]
 
 		// FIXME: Make this a lookup table
-		if (codec instanceof Moment) {
-			return 'BigInt'
+		if (codec instanceof Date) {
+			return 'String'
 		}
 
 		if (codec instanceof U128) {
@@ -202,6 +211,22 @@ class GraphQLServerSchemaBuilder<TMetadataVersion extends MetadataInterface = Me
 		}
 
 		throw new Error(`Unknown type: ${type}`)
+	}
+
+	private typeValueToGraphQL(storage:StorageDescriptor, value:Codec):any {
+		// Basic types
+		switch (storage.innerType) {
+			case 'bool':
+				return value.toJSON()
+		}
+
+		let codec = this.codecs[storage.innerType]
+
+		if (codec instanceof Date) {
+			return value.toString()
+		}
+
+		return value
 	}
 
 	private queryBlockSDL(schema:SDLSchema) {
@@ -244,6 +269,7 @@ class GraphQLServerSchemaBuilder<TMetadataVersion extends MetadataInterface = Me
 	}
 
 	private moduleResolver(name: string, module:ModuleDescriptor):resolverCallback {
+		let parent = this
 		let query = this.api.query[name]
 		return async function(root:any, args:any, ctx:any, info:any) { 
 			let output:Record<string, any> = {}
@@ -266,7 +292,8 @@ class GraphQLServerSchemaBuilder<TMetadataVersion extends MetadataInterface = Me
 			}
 
 			for (let i = 0; i < fieldNames.length; i++) {
-				output[fieldNames[i]] = values[i]
+				let storage = module.storageByAPIName(fieldNames[i])
+				output[fieldNames[i]] = parent.typeValueToGraphQL(storage, values[i])
 			}
 
 			return output
