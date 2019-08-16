@@ -9,94 +9,18 @@ import { default as U64 } from "@polkadot/types/primitive/U64"
 import { Codec } from "@polkadot/types/types"
 import { stringLowerFirst, stringUpperFirst } from "@polkadot/util"
 import { IGraphQLServerConfigurer } from "./GraphQLServer"
+import { ModuleDescriptor, ModuleDescriptorIndex } from "./ModuleDescriptor"
+import { SDLSchema } from "./SDLSchema"
+import { StorageDescriptor, StorageType } from "./StorageDescriptor"
 import { MustStringCodec } from "./util"
 
-enum StorageType {
-    Plain     = "PlainType",
-    Map       = "MapType",
-    DoubleMap = "DoubleMapType",
-}
-
-export class StorageDescriptor {
-    public APIName: string = ""
-    public structure?: StorageType
-    public innerType: string = ""
-    public mapKeyType?: string
-}
-
-export class ModuleDescriptor {
-    public storage: Record<string, StorageDescriptor> = {}
-
-    public storageByAPIName(apiName: string): StorageDescriptor {
-        for (const k of Object.keys(this.storage)) {
-            if (this.storage[k].APIName === apiName) {
-                return this.storage[k]
-            }
-        }
-
-        throw new Error(`APIName ${apiName} not found`)
-    }
-}
-
-export type ModuleDescriptorIndex = Record<string, ModuleDescriptor>
-
-const SDLTabSizeInSpaces = 4
-
-class SDLTypeDef {
-    protected schema: SDLSchema
-
-    constructor(schema: SDLSchema, name: string) {
-        this.schema = schema
-        this.schema.line(`type ${name} {`)
-    }
-
-    public declaration(content: string): SDLTypeDef {
-        this.schema.line(content, 1)
-        return this
-    }
-
-    public end() {
-        this.schema.line(`}`)
-    }
-}
-
-class SDLSchema {
-    protected output: string = ""
-    protected scalars: string[] = []
-
-    public line(value: string, indent: number = 0) {
-        this.output += " ".repeat(indent * SDLTabSizeInSpaces) + value + "\n"
-    }
-
-    public type(name: string): SDLTypeDef {
-        return new SDLTypeDef(this, name)
-    }
-
-    public requireScalar(name: string) {
-        const index = this.scalars.findIndex((x) => x === name)
-        if (index === -1) {
-            this.scalars.push(name)
-        }
-    }
-
-    public end() {
-        this.scalars.forEach((s) => {
-            this.line(`scalar ${s}`)
-        })
-    }
-
-    public get SDL(): string {
-        return this.output.trimEnd()
-    }
-}
-
-type ResolverCallback = (root: any, args: any, ctx: any, info: any) => any
-
-export type ResolverCallbackRecord = Record<string, ResolverCallback>
-
-interface IModuleArgs {
+interface IResolverCallbackArgs {
     block: number
 }
+
+type ResolverCallback = (root: any, args: IResolverCallbackArgs, ctx: any, info: any) => any
+
+export type ResolverCallbackRecord = Record<string, ResolverCallback>
 
 // TODO: implement a class that informs an extension of GraphQLServer
 export class GraphQLServerMetadataConfig
@@ -280,7 +204,7 @@ export class GraphQLServerMetadataConfig
     private moduleResolver(name: string, module: ModuleDescriptor): ResolverCallback {
         const parent = this
         const query = this.api.query[name]
-        return async (root: any, args: IModuleArgs, ctx: any, info: any) => {
+        return async (root: any, args: IResolverCallbackArgs, ctx: any, info: any) => {
             const output: Record<string, any> = {}
 
             // Look through requested fields

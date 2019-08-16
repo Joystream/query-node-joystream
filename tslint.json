@@ -2,7 +2,6 @@
   "extends": "tslint:recommended",
   "rules": {
     "no-var-requires": false,
-    "semicolon": [true, "never"],
-    "max-classes-per-file": [false]
+    "semicolon": [true, "never"]
   }
 }
