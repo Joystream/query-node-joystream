@@ -1,9 +1,11 @@
 import { ApiPromiseInterface } from "@polkadot/api/promise/types"
+import { Hash, Header, Struct } from "@polkadot/types"
 import { TypeRegistry } from "@polkadot/types/codec/typeRegistry"
 import { MetadataInterface } from "@polkadot/types/Metadata/types"
 import { default as MetadataV3,  MetadataModuleV3 } from "@polkadot/types/Metadata/v3"
 import { StorageFunctionMetadata as StorageFunctionMetadataV3 } from "@polkadot/types/Metadata/v3/Storage"
 import { default as U128 } from "@polkadot/types/primitive/U128"
+import { default as U64 } from "@polkadot/types/primitive/U64"
 import { Codec } from "@polkadot/types/types"
 import { stringLowerFirst, stringUpperFirst } from "@polkadot/util"
 import { IGraphQLServerConfigurer } from "./GraphQLServer"
@@ -92,6 +94,10 @@ type ResolverCallback = (root: any, args: any, ctx: any, info: any) => any
 
 export type ResolverCallbackRecord = Record<string, ResolverCallback>
 
+interface IModuleArgs {
+    block: number
+}
+
 // TODO: implement a class that informs an extension of GraphQLServer
 export class GraphQLServerMetadataConfig
     <TMetadataVersion extends MetadataInterface = MetadataV3>
@@ -128,7 +134,8 @@ export class GraphQLServerMetadataConfig
         }
 
         // FIXME! Remove this
-        if (MustStringCodec(input.name) !== "balances" && MustStringCodec(input.name) !== "timestamp") {
+        if (MustStringCodec(input.name) !== "balances" &&
+            MustStringCodec(input.name) !== "timestamp") {
             return
         }
 
@@ -188,6 +195,9 @@ export class GraphQLServerMetadataConfig
         switch (type) {
             case "bool":
                 return "Boolean"
+
+            case "u32":
+                return "Int"
         }
 
         const codec = this.codecs[type]
@@ -197,8 +207,15 @@ export class GraphQLServerMetadataConfig
             return "String"
         }
 
-        if (codec instanceof U128) {
-            schema.requireScalar("BigInt")
+        if (codec instanceof Hash) {
+            return "String"
+        }
+
+        if (codec instanceof Struct) {
+            return "String" // FIXME!
+        }
+
+        if (codec instanceof U128 || codec instanceof U64) {
             return "BigInt"
         }
 
@@ -226,7 +243,7 @@ export class GraphQLServerMetadataConfig
 
         for (const key of Object.keys(this.modules)) {
             const module = this.moduleSDLName(key)
-            q.declaration(`${key}(block: Int = 0): ${module}`)
+            q.declaration(`${key}(block: BigInt = 0): ${module}`)
         }
 
         q.end()
@@ -263,7 +280,7 @@ export class GraphQLServerMetadataConfig
     private moduleResolver(name: string, module: ModuleDescriptor): ResolverCallback {
         const parent = this
         const query = this.api.query[name]
-        return async (root: any, args: any, ctx: any, info: any) => {
+        return async (root: any, args: IModuleArgs, ctx: any, info: any) => {
             const output: Record<string, any> = {}
 
             // Look through requested fields
@@ -271,12 +288,29 @@ export class GraphQLServerMetadataConfig
             const selections = info.fieldNodes[0].selectionSet.selections as any[]
             const promises: Array<Promise<Codec>> = []
             const fieldNames: string[] = []
+            let blockHash: Codec = new Hash()
+
+            if (args.block !== 0) {
+                let block = args.block
+
+                if (block < 0) {
+                    const head = (await parent.api.rpc.chain.getHeader()) as Header
+                    block = head.number.toNumber() + block
+                }
+
+                blockHash = await parent.api.query.system.blockHash(block)
+            }
 
             // tslint:disable-next-line:prefer-for-of
             for (let i = 0; i < selections.length; i++) {
                 const fieldName = selections[i].name.value
                 fieldNames.push(fieldName)
-                promises.push(query[fieldName]())
+
+                if (args.block !== 0) {
+                    promises.push(query[fieldName].at(blockHash.toString()))
+                } else {
+                    promises.push(query[fieldName]())
+                }
             }
 
             const values = await Promise.all(promises)
@@ -296,6 +330,7 @@ export class GraphQLServerMetadataConfig
 
     public get SDL(): string {
         const schema = new SDLSchema()
+        schema.requireScalar("BigInt")
         this.queryBlockSDL(schema)
         this.moduleBlocksSDL(schema)
         schema.end()
