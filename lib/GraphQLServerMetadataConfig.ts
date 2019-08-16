@@ -22,7 +22,6 @@ type ResolverCallback = (root: any, args: IResolverCallbackArgs, ctx: any, info:
 
 export type ResolverCallbackRecord = Record<string, ResolverCallback>
 
-// TODO: implement a class that informs an extension of GraphQLServer
 export class GraphQLServerMetadataConfig
     <TMetadataVersion extends MetadataInterface = MetadataV3>
     implements IGraphQLServerConfigurer {
