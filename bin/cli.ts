@@ -2,6 +2,7 @@
 "use strict"
 
 import { ApiPromise, WsProvider } from "@polkadot/api"
+import { Phase } from "@polkadot/types/type/EventRecord"
 
 const chalk = require("chalk")
 const figlet = require("figlet")
@@ -26,6 +27,8 @@ registerJoystreamTypes();
     const api = await ApiPromise.create({
         provider: new WsProvider("ws://127.0.0.1:9944"),
         types: {
+
+			// FIXME! Why aren't these registered?
             Category: {},
             CategoryId: {},
             IPNSIdentity: {},
@@ -35,6 +38,10 @@ registerJoystreamTypes();
             Thread: {},
             ThreadId: {},
             Url: {},
+
+			// FIXME: Is there a better way of doing this?
+			// Why isn't it registered by default?
+			Phase: Phase,
         },
     })
 

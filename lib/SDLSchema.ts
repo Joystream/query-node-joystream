@@ -14,7 +14,7 @@ export interface ISDLSchemaLineWriter {
 export class SDLSchema implements ISDLSchemaLineWriter {
     protected output: string = ""
     protected scalars: string[] = []
-    protected types: Map<string,SDLTypeDef> = new Map()
+    protected types: Map<string, SDLTypeDef> = new Map()
 
     public line(value: string, indent: number = 0) {
         this.output += " ".repeat(indent * SDLTabSizeInSpaces) + value + "\n"

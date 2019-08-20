@@ -14,8 +14,8 @@ export class SDLTypeDef {
 
     public line(value: string, indent: number = 0) {
         this.buffer.push({
-            indent: indent,
-            value: value,
+            indent,
+            value,
         })
     }
 

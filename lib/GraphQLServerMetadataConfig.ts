@@ -1,13 +1,14 @@
 import { ApiPromiseInterface } from "@polkadot/api/promise/types"
-import { Hash, Header, Struct, Vector, EnumType } from "@polkadot/types"
-import { TypeRegistry } from "@polkadot/types/codec/typeRegistry"
+import { EnumType, Hash, Header, Struct, Vector } from "@polkadot/types"
 import { getTypeDef, TypeDef, TypeDefInfo } from "@polkadot/types/codec"
+import { TypeRegistry } from "@polkadot/types/codec/typeRegistry"
 import { MetadataInterface } from "@polkadot/types/Metadata/types"
 import { default as MetadataV3,  MetadataModuleV3 } from "@polkadot/types/Metadata/v3"
 import { StorageFunctionMetadata as StorageFunctionMetadataV3 } from "@polkadot/types/Metadata/v3/Storage"
 import { default as U128 } from "@polkadot/types/primitive/U128"
 import { default as U64 } from "@polkadot/types/primitive/U64"
-import { Codec } from "@polkadot/types/types"
+import { default as Null } from "@polkadot/types/primitive/Null"
+import { Codec, AnyU8a } from "@polkadot/types/types"
 import { stringLowerFirst, stringUpperFirst } from "@polkadot/util"
 import { IGraphQLServerConfigurer } from "./GraphQLServer"
 import { ModuleDescriptor, ModuleDescriptorIndex } from "./ModuleDescriptor"
@@ -52,8 +53,6 @@ export class GraphQLServerMetadataConfig
             // TODO: Support V4
             throw new Error("Only V3 supported")
         }
-
-        console.log(this.SDL)
     }
 
     private parseModulesV3(input: MetadataV3) {
@@ -115,7 +114,6 @@ export class GraphQLServerMetadataConfig
         }
 
         const reg = this.typeRegistry.get(typeName)
-        console.log("##",typeName, reg)
 
         if (typeof reg !== "undefined") {
            this.codecs[typeName] = new reg()
@@ -126,79 +124,23 @@ export class GraphQLServerMetadataConfig
         return stringUpperFirst(moduleName) + "Module"
     }
 
-    private decodeStruct<T extends Struct>(name:string, s:T, schema: SDLSchema) {
+    private decodeStruct<T extends Struct>(name: string, s: T, schema: SDLSchema) {
         if (schema.hasType(name)) {
             return
         }
-       
+
         const t = schema.type(name)
         const types = s as unknown as IStructTypes
         const raw = s as unknown as IStructType<Codec>
 
         for (const key of Object.keys(types._Types)) {
-            t.member(key, this.codecToSDL(types._Types[key], raw[key], schema)) 
+            t.member(key, this.codecToSDL(types._Types[key], raw[key], schema))
         }
     }
 
-    private codecToSDL<T extends Codec = Codec>(name: string, codec: T, schema: SDLSchema): string {
-        if (codec instanceof Vector) {
-            const raw = codec as Vector<any>
-            return this.stringTypeToSDL(schema, raw.Type)
-        }
+    private codecToSDL<T extends Codec = Codec>(type: string, codec: T, schema: SDLSchema): string {
 
-        if (codec instanceof Struct) {
-            return this.stringTypeToSDL(schema, name)
-        }
-
-        if (codec instanceof EnumType) {
-            return this.stringTypeToSDL(schema, name)
-        }
-
-        return "CodecToSDLFailed"
-    }
-
-    private stringTypeToSDL(schema: SDLSchema, type: string): string {
-        const decoded = getTypeDef(type) 
-        return this.typeDefToSDL(decoded, schema, type)
-    }
-
-    private typeDefToSDL(typeDef: TypeDef, schema: SDLSchema, type: string): string {
-        switch (typeDef.info) {
-            case TypeDefInfo.Plain:
-                return this.plainTypeToSDL(schema, type)
-
-            case TypeDefInfo.Vector:
-                let sub = typeDef.sub
-
-                if (typeof sub === "undefined") {
-                    break
-                }
-                
-                if (Array.isArray(sub)){
-                    throw new Error("Unexpected multiple sub-types in array")
-                }
-
-                sub = sub as TypeDef
-                return this.typeDefToSDL(sub, schema, sub.type)
-        }
-
-        throw new Error(`Unknown TypeDef type: ${type}`)
-    }
-
-    private plainTypeToSDL(schema: SDLSchema, type: string): string { 
-        // Basic types
-        switch (type) {
-            case "bool":
-                return "Boolean"
-
-            case "u32":
-                return "Int"
-        }
-
-        this.assertCodec(type)
-        const codec = this.codecs[type]
-
-        // FIXME: Make this a lookup table
+         // FIXME: Make this a lookup table
         if (codec instanceof Date) {
             return "String"
         }
@@ -218,13 +160,79 @@ export class GraphQLServerMetadataConfig
 
         if (codec instanceof EnumType) {
             // FIXME! Definitely wrong. Enums need to be handled
-            // gracefully, possibly as queries.
-            return "[String!]"
+            // gracefully, possibly as filter queries.
+            schema.requireScalar("UnknownEnum")
+            return "UnknownEnum"
         }
-        
-        console.log("@@", type, codec)
 
-        return `UnknownPlainType${type}`
+        if (codec instanceof Vector) {
+            const raw = codec as Vector<any>
+            return "[" + this.stringTypeToSDL(schema, raw.Type) + "]"
+        }
+
+        if (codec instanceof Struct) {
+            return this.stringTypeToSDL(schema, type)
+        }
+
+        if (codec instanceof EnumType) {
+            return this.stringTypeToSDL(schema, type)
+        }
+
+        if (codec instanceof Uint8Array) {
+            return "[Int]"
+        }
+
+        if (codec instanceof Null) {
+            // FIXME! Why are some types (event.data) set to Null?
+            schema.requireScalar("Null")
+            return "Null"
+        }
+
+        return "CodecToSDLFailed"+type
+    }
+
+    private stringTypeToSDL(schema: SDLSchema, type: string): string {
+        const decoded = getTypeDef(type)
+        return this.typeDefToSDL(decoded, schema, type)
+    }
+
+    private typeDefToSDL(typeDef: TypeDef, schema: SDLSchema, type: string): string {
+        switch (typeDef.info) {
+            case TypeDefInfo.Plain:
+                return this.plainTypeToSDL(schema, type)
+
+            case TypeDefInfo.Vector:
+                let sub = typeDef.sub
+
+                if (typeof sub === "undefined") {
+                    break
+                }
+
+                if (Array.isArray(sub)) {
+                    throw new Error("Unexpected multiple sub-types in array")
+                }
+
+                sub = sub as TypeDef
+                return "[" + this.typeDefToSDL(sub, schema, sub.type) + "]"
+        }
+
+        throw new Error(`Unknown TypeDef type: ${type}`)
+    }
+
+    private plainTypeToSDL(schema: SDLSchema, type: string): string {
+        // Basic types
+        switch (type) {
+            case "bool":
+                return "Boolean"
+
+            case "u32":
+                return "Int"
+        }
+
+        this.assertCodec(type)
+        const codec = this.codecs[type]
+
+        return this.codecToSDL(type, codec, schema)
     }
 
     private typeValueToGraphQL(storage: StorageDescriptor, value: Codec): any {
