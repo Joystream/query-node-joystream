@@ -9,6 +9,8 @@ const figlet = require("figlet")
 const log = require("npmlog")
 import { App } from "../lib/App"
 
+console.error = function(){};
+
 log.level = "verbose"
 
 function banner() {
