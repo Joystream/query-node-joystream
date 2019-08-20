@@ -9,7 +9,8 @@ const figlet = require("figlet")
 const log = require("npmlog")
 import { App } from "../lib/App"
 
-console.error = function(){};
+// tslint:disable-next-line
+console.error = () => {}
 
 log.level = "verbose"
 
@@ -30,7 +31,7 @@ registerJoystreamTypes();
         provider: new WsProvider("ws://127.0.0.1:9944"),
         types: {
 
-			// FIXME! Why aren't these registered?
+            // FIXME! Why aren't these registered?
             Category: {},
             CategoryId: {},
             IPNSIdentity: {},
@@ -41,9 +42,9 @@ registerJoystreamTypes();
             ThreadId: {},
             Url: {},
 
-			// FIXME: Is there a better way of doing this?
-			// Why isn't it registered by default?
-			Phase: Phase,
+            // FIXME: Is there a better way of doing this?
+            // Why isn't it registered by default?
+            Phase,
         },
     })
 

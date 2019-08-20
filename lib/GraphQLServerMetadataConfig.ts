@@ -5,10 +5,10 @@ import { TypeRegistry } from "@polkadot/types/codec/typeRegistry"
 import { MetadataInterface } from "@polkadot/types/Metadata/types"
 import { default as MetadataV3,  MetadataModuleV3 } from "@polkadot/types/Metadata/v3"
 import { StorageFunctionMetadata as StorageFunctionMetadataV3 } from "@polkadot/types/Metadata/v3/Storage"
+import { default as Null } from "@polkadot/types/primitive/Null"
 import { default as U128 } from "@polkadot/types/primitive/U128"
 import { default as U64 } from "@polkadot/types/primitive/U64"
-import { default as Null } from "@polkadot/types/primitive/Null"
-import { Codec, AnyU8a } from "@polkadot/types/types"
+import { AnyU8a, Codec } from "@polkadot/types/types"
 import { stringLowerFirst, stringUpperFirst } from "@polkadot/util"
 import { IGraphQLServerConfigurer } from "./GraphQLServer"
 import { ModuleDescriptor, ModuleDescriptorIndex } from "./ModuleDescriptor"
@@ -188,7 +188,7 @@ export class GraphQLServerMetadataConfig
             return "Null"
         }
 
-        return "CodecToSDLFailed"+type
+        return "CodecToSDLFailed" + type
     }
 
     private stringTypeToSDL(schema: SDLSchema, type: string): string {

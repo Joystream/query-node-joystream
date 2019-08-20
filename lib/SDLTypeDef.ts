@@ -8,9 +8,9 @@ export class SDLTypeDef {
         this.line(`type ${name} {`)
     }
 
-	public member(name: string, value: string) {
-		this.line(`${name}: ${value}`, 1)
-	}
+    public member(name: string, value: string) {
+        this.line(`${name}: ${value}`, 1)
+    }
 
     public line(value: string, indent: number = 0) {
         this.buffer.push({
