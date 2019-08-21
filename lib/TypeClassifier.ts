@@ -11,11 +11,6 @@ import { ModuleDescriptor, ModuleDescriptorIndex } from "./ModuleDescriptor"
 import { SDLSchema } from "./SDLSchema"
 import { StorageType } from "./StorageDescriptor"
 
-export interface ITypeClassifier {
-    queryBlockSDL(schema: SDLSchema, modules: ModuleDescriptorIndex): void
-    moduleBlocksSDL(schema: SDLSchema, modules: ModuleDescriptorIndex): void
-}
-
 type SDLSchemaFragment = string
 
 interface IStructType<T = string> {

@@ -12,10 +12,6 @@ type ResolverCallback = (root: any, args: IResolverCallbackArgs, ctx: any, info:
 
 export type ResolverCallbackRecord = Record<string, ResolverCallback>
 
-export interface IQueryResolver {
-    moduleResolvers(resolvers: ResolverCallbackRecord, modules: ModuleDescriptorIndex): void
-}
-
 export class QueryResolver {
     protected api: ApiPromiseInterface
 

@@ -8,10 +8,17 @@ import { IGraphQLServerConfigurer } from "./GraphQLServer"
 import { ModuleDescriptor, ModuleDescriptorIndex } from "./ModuleDescriptor"
 import { SDLSchema } from "./SDLSchema"
 import { StorageDescriptor, StorageType } from "./StorageDescriptor"
-import { ITypeClassifier } from "./TypeClassifier"
-import { IQueryResolver } from "./QueryResolver"
 import { MustStringCodec } from "./util"
 import { ResolverCallbackRecord } from "./QueryResolver"
+
+interface ITypeClassifier {
+    queryBlockSDL(schema: SDLSchema, modules: ModuleDescriptorIndex): void
+    moduleBlocksSDL(schema: SDLSchema, modules: ModuleDescriptorIndex): void
+}
+
+interface IQueryResolver {
+    moduleResolvers(resolvers: ResolverCallbackRecord, modules: ModuleDescriptorIndex): void
+}
 
 export class GraphQLServerMetadataConfig
     <TMetadataVersion extends MetadataInterface = MetadataV3>
