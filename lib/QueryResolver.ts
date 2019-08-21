@@ -4,6 +4,8 @@ import { Codec } from "@polkadot/types/types"
 import { ModuleDescriptor, ModuleDescriptorIndex } from "./ModuleDescriptor"
 import { StorageDescriptor } from "./StorageDescriptor"
 
+import {  Tuple, Vector } from "@polkadot/types"
+
 interface IResolverCallbackArgs {
     block: number
 }
@@ -28,6 +30,20 @@ export class QueryResolver {
 
         if (value instanceof Date) {
             return value.toJSON()
+        }
+
+        if (storage.APIName == "recentlyOffline") {
+            if (value instanceof Vector) {
+
+				const vec = value as Vector<any> as any
+				// TODO: extract info for tuples (and vectors of tuples) and fill in any any-type object
+				console.log(new vec._Type)
+                return [
+                    {
+                        accountId: "hello"
+                    }
+                ]
+            }
         }
 
         return value

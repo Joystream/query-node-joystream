@@ -1,8 +1,6 @@
-import { Hash, Header } from "@polkadot/types"
 import { MetadataInterface } from "@polkadot/types/Metadata/types"
 import { default as MetadataV3,  MetadataModuleV3 } from "@polkadot/types/Metadata/v3"
 import { StorageFunctionMetadata as StorageFunctionMetadataV3 } from "@polkadot/types/Metadata/v3/Storage"
-import { Codec } from "@polkadot/types/types"
 import { stringLowerFirst } from "@polkadot/util"
 import { IGraphQLServerConfigurer } from "./GraphQLServer"
 import { ModuleDescriptor, ModuleDescriptorIndex } from "./ModuleDescriptor"
@@ -39,6 +37,7 @@ export class GraphQLServerMetadataConfig
             // TODO: Support V4
             throw new Error("Only V3 supported")
         }
+		console.log(this.SDL)
     }
 
     private parseModulesV3(input: MetadataV3) {

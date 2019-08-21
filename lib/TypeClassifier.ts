@@ -1,12 +1,12 @@
-import { AccountId, EnumType, Hash, Struct, Vector } from "@polkadot/types"
-import { getTypeDef, TypeDef, TypeDefInfo } from "@polkadot/types/codec"
+import { AccountId, EnumType, Hash, Struct, Tuple, Vector } from "@polkadot/types"
+import { getTypeDef, TypeDef, getTypeClass, TypeDefInfo } from "@polkadot/types/codec"
 import { TypeRegistry } from "@polkadot/types/codec/typeRegistry"
 import { default as Null } from "@polkadot/types/primitive/Null"
 import { default as U128 } from "@polkadot/types/primitive/U128"
 import { default as U32 } from "@polkadot/types/primitive/U32"
 import { default as U64 } from "@polkadot/types/primitive/U64"
 import { Codec } from "@polkadot/types/types"
-import { stringUpperFirst } from "@polkadot/util"
+import { stringLowerFirst, stringUpperFirst } from "@polkadot/util"
 import { ModuleDescriptor, ModuleDescriptorIndex } from "./ModuleDescriptor"
 import { SDLSchema } from "./SDLSchema"
 import { StorageType } from "./StorageDescriptor"
@@ -94,6 +94,28 @@ export class TypeClassifier {
         }
     }
 
+    public tupleName(parts: string[]): string {
+        return parts.join("") + "Tuple"
+    }
+
+    public decodeTuple<T extends Tuple>(t: T, schema: SDLSchema): SDLSchemaFragment {
+        const name = this.tupleName(t.Types)
+
+        if (schema.hasType(name)) {
+            return name
+        }
+
+        const def = schema.type(name)
+        const parent = this
+        
+        for (let k in t.Types) {
+            let value = t.Types[k]
+            def.member(stringLowerFirst(value), parent.stringTypeToSDL(schema, value))
+        }
+
+        return name
+    }
+
     public codecToSDL<T extends Codec = Codec>(type: string, codec: T, schema: SDLSchema): SDLSchemaFragment {
         for (let i = 0; i < CodecMapping.length; i++) {
             if (codec instanceof CodecMapping[i].codec) {
@@ -130,9 +152,9 @@ export class TypeClassifier {
                 return this.plainTypeToSDL(schema, type)
 
             case TypeDefInfo.Tuple:
-                // FIXME! handle tuples
-                schema.requireScalar("UnknownTuple")
-                return "UnknownTuple"
+                const constructor = getTypeClass(typeDef)
+                const tuple = new constructor()
+                return this.decodeTuple(tuple as Tuple, schema)
 
             case TypeDefInfo.Vector:
                 let sub = typeDef.sub
