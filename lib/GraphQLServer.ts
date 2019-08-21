@@ -1,6 +1,6 @@
 import { BigIntResolver } from "graphql-scalars"
 import { GraphQLServer as BaseGraphQLServer } from "graphql-yoga"
-import { ResolverCallbackRecord } from "./GraphQLServerMetadataConfig"
+import { ResolverCallbackRecord } from "./QueryResolver"
 
 export interface IGraphQLServerConfigurer {
     SDL: string
