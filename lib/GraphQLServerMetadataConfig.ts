@@ -4,10 +4,10 @@ import { StorageFunctionMetadata as StorageFunctionMetadataV3 } from "@polkadot/
 import { stringLowerFirst } from "@polkadot/util"
 import { IGraphQLServerConfigurer } from "./GraphQLServer"
 import { ModuleDescriptor, ModuleDescriptorIndex } from "./ModuleDescriptor"
+import { ResolverCallbackRecord } from "./QueryResolver"
 import { SDLSchema } from "./SDLSchema"
 import { StorageDescriptor, StorageType } from "./StorageDescriptor"
 import { MustStringCodec } from "./util"
-import { ResolverCallbackRecord } from "./QueryResolver"
 
 interface ITypeClassifier {
     queryBlockSDL(schema: SDLSchema, modules: ModuleDescriptorIndex): void
@@ -37,7 +37,6 @@ export class GraphQLServerMetadataConfig
             // TODO: Support V4
             throw new Error("Only V3 supported")
         }
-		console.log(this.SDL)
     }
 
     private parseModulesV3(input: MetadataV3) {

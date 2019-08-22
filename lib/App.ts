@@ -3,8 +3,8 @@ import { getTypeRegistry } from "@polkadot/types"
 import { TypeRegistry } from "@polkadot/types/codec/typeRegistry"
 import { GraphQLServer } from "./GraphQLServer"
 import { GraphQLServerMetadataConfig } from "./GraphQLServerMetadataConfig"
-import { TypeClassifier } from "./TypeClassifier"
 import { QueryResolver } from "./QueryResolver"
+import { TypeClassifier } from "./TypeClassifier"
 
 const log = require("npmlog")
 

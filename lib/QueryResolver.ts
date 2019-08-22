@@ -1,10 +1,10 @@
 import { ApiPromiseInterface } from "@polkadot/api/promise/types"
 import { Hash, Header } from "@polkadot/types"
+import {  Tuple, Vector } from "@polkadot/types"
 import { Codec } from "@polkadot/types/types"
+import { stringLowerFirst } from "@polkadot/util"
 import { ModuleDescriptor, ModuleDescriptorIndex } from "./ModuleDescriptor"
 import { StorageDescriptor } from "./StorageDescriptor"
-
-import {  Tuple, Vector } from "@polkadot/types"
 
 interface IResolverCallbackArgs {
     block: number
@@ -13,6 +13,15 @@ interface IResolverCallbackArgs {
 type ResolverCallback = (root: any, args: IResolverCallbackArgs, ctx: any, info: any) => any
 
 export type ResolverCallbackRecord = Record<string, ResolverCallback>
+
+// FIXME! Move to shared tuple and struct classes
+interface ITupleType<T = string> extends Array<T> {
+    [index: number]: T
+}
+
+interface ITupleTypes<T = string> {
+    Types: ITupleType<T>
+}
 
 export class QueryResolver {
     protected api: ApiPromiseInterface
@@ -32,21 +41,7 @@ export class QueryResolver {
             return value.toJSON()
         }
 
-        if (storage.APIName == "recentlyOffline") {
-            if (value instanceof Vector) {
-
-				const vec = value as Vector<any> as any
-				// TODO: extract info for tuples (and vectors of tuples) and fill in any any-type object
-				console.log(new vec._Type)
-                return [
-                    {
-                        accountId: "hello"
-                    }
-                ]
-            }
-        }
-
-        return value
+        return this.serialiseCodec(value)
     }
 
     public moduleResolvers(resolvers: ResolverCallbackRecord, modules: ModuleDescriptorIndex) {
@@ -79,7 +74,6 @@ export class QueryResolver {
                 blockHash = await parent.api.query.system.blockHash(block)
             }
 
-            // tslint:disable-next-line:prefer-for-of
             for (let i = 0; i < selections.length; i++) {
                 const fieldName = selections[i].name.value
                 fieldNames.push(fieldName)
@@ -104,5 +98,55 @@ export class QueryResolver {
 
             return output
         }
+    }
+
+    protected serialiseCodec<T extends Codec>(codec: T): any {
+        if (codec instanceof Tuple) {
+            return this.serialiseTuple(codec)
+        }
+
+        if (codec instanceof Vector) {
+            return this.serialiseVector(codec)
+        }
+
+        return codec
+    }
+
+    protected serialiseVector<T extends Vector<any>>(v: T): any {
+        switch (v.Type) {
+            case "Tuple":
+                return this.serialiseVectorTuple(v)
+        }
+
+        return v
+    }
+
+    protected serialiseVectorTuple<T extends Vector<Tuple>>(vec: T): any {
+        const output = []
+        const entries = vec.toArray()
+
+        // tslint:disable-next-line
+        for (const k in entries) {
+            output.push(this.serialiseTuple(entries[k]))
+        }
+
+        return output
+    }
+
+    protected serialiseTuple<T extends Tuple>(value: T): any {
+        const tupleEntries = value.toArray()
+
+        if (value.Types.length !== tupleEntries.length) {
+            throw new Error("Mismatched tuple entries")
+        }
+
+        const entryOutput: any = {}
+
+        // tslint:disable-next-line
+        for (const i in value.Types) {
+            entryOutput[stringLowerFirst(value.Types[i])] = this.serialiseCodec(tupleEntries[i])
+        }
+
+        return entryOutput
     }
 }

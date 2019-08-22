@@ -1,5 +1,5 @@
 import { AccountId, EnumType, Hash, Struct, Tuple, Vector } from "@polkadot/types"
-import { getTypeDef, TypeDef, getTypeClass, TypeDefInfo } from "@polkadot/types/codec"
+import { getTypeClass, getTypeDef, TypeDef, TypeDefInfo } from "@polkadot/types/codec"
 import { TypeRegistry } from "@polkadot/types/codec/typeRegistry"
 import { default as Null } from "@polkadot/types/primitive/Null"
 import { default as U128 } from "@polkadot/types/primitive/U128"
@@ -21,41 +21,40 @@ interface IStructTypes<T = string> {
     _Types: IStructType<T>
 }
 
-interface ICodecCallback {
-    (classifier: TypeClassifier, schema: SDLSchema, type: string, codec: Codec): SDLSchemaFragment
-}
+type ICodecCallback = (classifier: TypeClassifier, schema: SDLSchema, type: string, codec: Codec) => SDLSchemaFragment
 
 class ICodecMapping {
-    codec: any
-    SDL?: SDLSchemaFragment
-    customScalar?: boolean 
-    callback?: ICodecCallback
+    public codec: any
+    public SDL?: SDLSchemaFragment
+    public customScalar?: boolean
+    public callback?: ICodecCallback
 }
 
-const CodecMapping:ICodecMapping[] = [
+const CodecMapping: ICodecMapping[] = [
     { codec: AccountId, SDL: "String" },
     { codec: Date, SDL: "Int" },
     { codec: EnumType, SDL: "UnknownEnum", customScalar: true }, // FIXME! Handle this properly
     { codec: Hash, SDL: "String" },
     { codec: Null, SDL: "Null", customScalar: true },
-    { codec: Struct, 
-      callback: (classifier: TypeClassifier, schema: SDLSchema, type: string, codec: Codec): SDLSchemaFragment => {
-          classifier.decodeStruct(type, codec as Struct, schema)
-          return type
+    { callback: (classifier: TypeClassifier, schema: SDLSchema, type: string, codec: Codec): SDLSchemaFragment => {
+            classifier.decodeStruct(type, codec as Struct, schema)
+            return type
       },
+      codec: Struct,
     },
     { codec: U32, SDL: "Int" },
     { codec: U64, SDL: "BigInt", customScalar: true },
     { codec: U128, SDL: "BigInt", customScalar: true },
     { codec: Uint8Array, SDL: "[Int]" },
-    { codec: Vector, 
-      callback: (classifier: TypeClassifier, schema: SDLSchema, type: string, codec: Codec): SDLSchemaFragment => {
-          const raw = codec as Vector<any>
-          return "[" + classifier.stringTypeToSDL(schema, raw.Type) + "]"
-      },
+    { callback: (classifier: TypeClassifier, schema: SDLSchema, type: string, codec: Codec): SDLSchemaFragment => {
+            const raw = codec as Vector<any>
+            return "[" + classifier.stringTypeToSDL(schema, raw.Type) + "]"
+        },
+      codec: Vector,
     },
 ]
 
+// tslint:disable-next-line:max-classes-per-file
 export class TypeClassifier {
     protected codecs: Record<string, Codec> = {}
     protected typeRegistry: TypeRegistry
@@ -72,7 +71,7 @@ export class TypeClassifier {
         const reg = this.typeRegistry.get(typeName)
 
         if (typeof reg !== "undefined") {
-           this.codecs[typeName] = new reg()
+            this.codecs[typeName] = new reg()
         }
     }
 
@@ -107,9 +106,10 @@ export class TypeClassifier {
 
         const def = schema.type(name)
         const parent = this
-        
-        for (let k in t.Types) {
-            let value = t.Types[k]
+
+        // tslint:disable-next-line
+        for (const k in t.Types) {
+            const value = t.Types[k]
             def.member(stringLowerFirst(value), parent.stringTypeToSDL(schema, value))
         }
 
@@ -120,7 +120,7 @@ export class TypeClassifier {
         for (let i = 0; i < CodecMapping.length; i++) {
             if (codec instanceof CodecMapping[i].codec) {
                 let value = CodecMapping[i].SDL
-                
+
                 const callback = CodecMapping[i].callback
                 if (typeof callback !== "undefined") {
                     value = callback(this, schema, type, codec)
