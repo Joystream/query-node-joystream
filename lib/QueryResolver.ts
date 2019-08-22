@@ -1,5 +1,5 @@
 import { ApiPromiseInterface } from "@polkadot/api/promise/types"
-import { Hash, Header } from "@polkadot/types"
+import { EnumType, Hash, Header } from "@polkadot/types"
 import {  Tuple, Vector } from "@polkadot/types"
 import { Codec } from "@polkadot/types/types"
 import { stringLowerFirst } from "@polkadot/util"
@@ -14,15 +14,6 @@ type ResolverCallback = (root: any, args: IResolverCallbackArgs, ctx: any, info:
 
 export type ResolverCallbackRecord = Record<string, ResolverCallback>
 
-// FIXME! Move to shared tuple and struct classes
-interface ITupleType<T = string> extends Array<T> {
-    [index: number]: T
-}
-
-interface ITupleTypes<T = string> {
-    Types: ITupleType<T>
-}
-
 export class QueryResolver {
     protected api: ApiPromiseInterface
 
@@ -31,7 +22,6 @@ export class QueryResolver {
     }
 
     public typeValueToGraphQL(storage: StorageDescriptor, value: Codec): any {
-        // Basic types
         switch (storage.innerType) {
             case "bool":
                 return value.toJSON()
@@ -113,21 +103,12 @@ export class QueryResolver {
     }
 
     protected serialiseVector<T extends Vector<any>>(v: T): any {
-        switch (v.Type) {
-            case "Tuple":
-                return this.serialiseVectorTuple(v)
-        }
-
-        return v
-    }
-
-    protected serialiseVectorTuple<T extends Vector<Tuple>>(vec: T): any {
         const output = []
-        const entries = vec.toArray()
+        const entries = v.toArray()
 
         // tslint:disable-next-line
         for (const k in entries) {
-            output.push(this.serialiseTuple(entries[k]))
+            output.push(this.serialiseCodec(entries[k]))
         }
 
         return output
@@ -135,11 +116,6 @@ export class QueryResolver {
 
     protected serialiseTuple<T extends Tuple>(value: T): any {
         const tupleEntries = value.toArray()
-
-        if (value.Types.length !== tupleEntries.length) {
-            throw new Error("Mismatched tuple entries")
-        }
-
         const entryOutput: any = {}
 
         // tslint:disable-next-line

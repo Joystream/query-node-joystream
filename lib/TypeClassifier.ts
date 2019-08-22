@@ -13,12 +13,16 @@ import { StorageType } from "./StorageDescriptor"
 
 type SDLSchemaFragment = string
 
-interface IStructType<T = string> {
+interface IStringIndex<T = string> {
     [index: string]: T
 }
 
 interface IStructTypes<T = string> {
-    _Types: IStructType<T>
+    _Types: IStringIndex<T>
+}
+
+interface IEnumTypes<T = any> {
+    _def: IStringIndex<T>
 }
 
 type ICodecCallback = (classifier: TypeClassifier, schema: SDLSchema, type: string, codec: Codec) => SDLSchemaFragment
@@ -33,7 +37,13 @@ class ICodecMapping {
 const CodecMapping: ICodecMapping[] = [
     { codec: AccountId, SDL: "String" },
     { codec: Date, SDL: "Int" },
-    { codec: EnumType, SDL: "UnknownEnum", customScalar: true }, // FIXME! Handle this properly
+    { callback: (classifier: TypeClassifier, schema: SDLSchema, type: string, codec: Codec): SDLSchemaFragment => {
+        // TODO! Create type which has optional values for each of the fields
+        // Update: or a union? How to handle __typename?
+        return classifier.decodeEnum(type, codec as EnumType<any>, schema)
+      },
+      codec: EnumType,
+    },
     { codec: Hash, SDL: "String" },
     { codec: Null, SDL: "Null", customScalar: true },
     { callback: (classifier: TypeClassifier, schema: SDLSchema, type: string, codec: Codec): SDLSchemaFragment => {
@@ -41,6 +51,11 @@ const CodecMapping: ICodecMapping[] = [
             return type
       },
       codec: Struct,
+    },
+    { callback: (classifier: TypeClassifier, schema: SDLSchema, type: string, codec: Codec): SDLSchemaFragment => {
+            return classifier.decodeTuple(codec as Tuple, schema)
+      },
+      codec: Tuple,
     },
     { codec: U32, SDL: "Int" },
     { codec: U64, SDL: "BigInt", customScalar: true },
@@ -79,6 +94,33 @@ export class TypeClassifier {
         return stringUpperFirst(moduleName) + "Module"
     }
 
+    public enumName(type: string): string {
+        return type + "Enum"
+    }
+
+    public decodeEnum<T extends EnumType<any>>(type: string, codec: T, schema: SDLSchema): string {
+        const name = this.enumName(type)
+        /*
+         * FIXME: Question: what to do?
+         *
+         *        This makes nicer SDL, but it impossible to serialise:
+
+                  if (schema.hasUnion(name)) {
+                  return name
+                  }
+
+                  const u = schema.union(name)
+                  const raw = codec as unknown as IEnumTypes<any>
+
+                  for (const key of Object.keys(raw._def)) {
+                  u.member(this.codecToSDL(key, new raw._def[key](), schema))
+                  }
+         */
+        schema.requireScalar(name)
+
+        return name
+    }
+
     public decodeStruct<T extends Struct>(name: string, s: T, schema: SDLSchema) {
         if (schema.hasType(name)) {
             return
@@ -86,7 +128,7 @@ export class TypeClassifier {
 
         const t = schema.type(name)
         const types = s as unknown as IStructTypes
-        const raw = s as unknown as IStructType<Codec>
+        const raw = s as unknown as IStringIndex<Codec>
 
         for (const key of Object.keys(types._Types)) {
             t.member(key, this.codecToSDL(types._Types[key], raw[key], schema))

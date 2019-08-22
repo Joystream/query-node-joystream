@@ -1,4 +1,5 @@
 import { SDLTypeDef } from "./SDLTypeDef"
+import { SDLUnionDef } from "./SDLUnionDef"
 
 const SDLTabSizeInSpaces = 4
 
@@ -15,6 +16,7 @@ export class SDLSchema implements ISDLSchemaLineWriter {
     protected output: string = ""
     protected scalars: string[] = []
     protected types: Map<string, SDLTypeDef> = new Map()
+    protected unions: Map<string, SDLUnionDef> = new Map()
 
     public line(value: string, indent: number = 0) {
         this.output += " ".repeat(indent * SDLTabSizeInSpaces) + value + "\n"
@@ -26,8 +28,18 @@ export class SDLSchema implements ISDLSchemaLineWriter {
         return typeDec
     }
 
+    public union(name: string): SDLUnionDef {
+        const union = new SDLUnionDef(name)
+        this.unions.set(name, union)
+        return union
+    }
+
     public hasType(name: string): boolean {
         return this.types.has(name)
+    }
+
+    public hasUnion(name: string): boolean {
+        return this.unions.has(name)
     }
 
     public requireScalar(name: string) {
@@ -44,6 +56,10 @@ export class SDLSchema implements ISDLSchemaLineWriter {
 
         this.scalars.forEach((s) => {
             this.line(`scalar ${s}`)
+        })
+
+        this.unions.forEach((u) => {
+            u.write(this)
         })
     }
 
