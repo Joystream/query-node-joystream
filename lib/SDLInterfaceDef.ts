@@ -1,7 +1,7 @@
 import { SDLTypeDef } from "./SDLTypeDef"
 
 export class SDLInterfaceDef extends SDLTypeDef {
-    constructor(name: string, _interface?: string) {
+    constructor(name: string) {
         super(name)
     }
 

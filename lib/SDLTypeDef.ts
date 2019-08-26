@@ -6,9 +6,9 @@ export class SDLTypeDef {
     protected name: string
     protected implements: string|undefined
 
-    constructor(name: string, _implements?: string) {
+    constructor(name: string, implementsInterface?: string) {
         this.name = name
-        this.implements = _implements
+        this.implements = implementsInterface
         this.start()
     }
 

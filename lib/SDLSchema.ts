@@ -30,8 +30,8 @@ export class SDLSchema implements ISDLSchemaLineWriter {
         return dec
     }
 
-    public type(name: string, _implements?: string): SDLTypeDef {
-        const typeDec = new SDLTypeDef(name, _implements)
+    public type(name: string, implementsInterface?: string): SDLTypeDef {
+        const typeDec = new SDLTypeDef(name, implementsInterface)
         this.types.set(name, typeDec)
         return typeDec
     }
