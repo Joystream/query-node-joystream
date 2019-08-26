@@ -1,10 +1,14 @@
 import { ApiPromiseInterface } from "@polkadot/api/promise/types"
-import { EnumType, Hash, Header } from "@polkadot/types"
-import {  Tuple, Vector } from "@polkadot/types"
+import { EnumType, Hash, Header, Struct } from "@polkadot/types"
+import { Tuple, Vector } from "@polkadot/types"
+import { default as U32 } from "@polkadot/types/primitive/U32"
 import { Codec } from "@polkadot/types/types"
 import { stringLowerFirst } from "@polkadot/util"
 import { ModuleDescriptor, ModuleDescriptorIndex } from "./ModuleDescriptor"
 import { StorageDescriptor } from "./StorageDescriptor"
+
+// FIXME! Remove and move to a new class
+import { IStructTypes } from "./TypeClassifier"
 
 interface IResolverCallbackArgs {
     block: number
@@ -25,10 +29,6 @@ export class QueryResolver {
         switch (storage.innerType) {
             case "bool":
                 return value.toJSON()
-        }
-
-        if (value instanceof Date) {
-            return value.toJSON()
         }
 
         return this.serialiseCodec(value)
@@ -91,15 +91,39 @@ export class QueryResolver {
     }
 
     protected serialiseCodec<T extends Codec>(codec: T): any {
-        if (codec instanceof Tuple) {
-            return this.serialiseTuple(codec)
-        }
-
         if (codec instanceof Vector) {
             return this.serialiseVector(codec)
         }
 
+        if (codec instanceof Struct) {
+            return this.serialiseStruct(codec)
+        }
+
+        if (codec instanceof Tuple) {
+            return this.serialiseTuple(codec)
+        }
+
+        if (codec instanceof EnumType) {
+            return this.serialiseEnum(codec)
+        }
+
+        if (codec instanceof Date) {
+            return codec.toJSON()
+        }
+
+        // FIXME! U64, 128
+        if (codec instanceof U32) {
+            return codec.toJSON()
+        }
+
         return codec
+    }
+
+    protected serialiseEnum<T extends EnumType<any>>(e: T): any {
+        const output: any = {}
+        output[e.type] = this.serialiseCodec(e.value)
+        output._enumType = e.type
+        return output
     }
 
     protected serialiseVector<T extends Vector<any>>(v: T): any {
@@ -112,6 +136,21 @@ export class QueryResolver {
         }
 
         return output
+    }
+
+    protected serialiseStruct<T extends Struct>(value: T): any {
+       const output: any = {}
+       const types = value as unknown as IStructTypes
+
+       for (const key of Object.keys(types._Types)) {
+            const raw = value.get(key)
+
+            if (typeof raw !== "undefined") {
+                output[key] = this.serialiseCodec(raw)
+            }
+        }
+
+       return output
     }
 
     protected serialiseTuple<T extends Tuple>(value: T): any {

@@ -17,7 +17,7 @@ interface IStringIndex<T = string> {
     [index: string]: T
 }
 
-interface IStructTypes<T = string> {
+export interface IStructTypes<T = string> {
     _Types: IStringIndex<T>
 }
 
@@ -95,28 +95,30 @@ export class TypeClassifier {
     }
 
     public enumName(type: string): string {
-        return type + "Enum"
+        return type
     }
 
     public decodeEnum<T extends EnumType<any>>(type: string, codec: T, schema: SDLSchema): string {
         const name = this.enumName(type)
-        /*
-         * FIXME: Question: what to do?
-         *
-         *        This makes nicer SDL, but it impossible to serialise:
 
-                  if (schema.hasUnion(name)) {
-                  return name
-                  }
+        if (schema.hasType(name)) {
+            return name
+        }
 
-                  const u = schema.union(name)
-                  const raw = codec as unknown as IEnumTypes<any>
+        const ifaceName = "Enum"
+        if (!schema.hasInterface(ifaceName)) {
+            const iface = schema.interface(ifaceName)
+            iface.member("_enumType", "String")
+        }
 
-                  for (const key of Object.keys(raw._def)) {
-                  u.member(this.codecToSDL(key, new raw._def[key](), schema))
-                  }
-         */
-        schema.requireScalar(name)
+        const u = schema.type(name, ifaceName)
+        const raw = codec as unknown as IEnumTypes<any>
+
+        for (const key of Object.keys(raw._def)) {
+            u.member(key, this.codecToSDL(key, new raw._def[key](), schema))
+        }
+
+        u.member("_enumType", "String")
 
         return name
     }

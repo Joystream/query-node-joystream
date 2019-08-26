@@ -1,3 +1,4 @@
+import { SDLInterfaceDef } from "./SDLInterfaceDef"
 import { SDLTypeDef } from "./SDLTypeDef"
 import { SDLUnionDef } from "./SDLUnionDef"
 
@@ -15,6 +16,7 @@ export interface ISDLSchemaLineWriter {
 export class SDLSchema implements ISDLSchemaLineWriter {
     protected output: string = ""
     protected scalars: string[] = []
+    protected interfaces: Map<string, SDLInterfaceDef> = new Map()
     protected types: Map<string, SDLTypeDef> = new Map()
     protected unions: Map<string, SDLUnionDef> = new Map()
 
@@ -22,8 +24,14 @@ export class SDLSchema implements ISDLSchemaLineWriter {
         this.output += " ".repeat(indent * SDLTabSizeInSpaces) + value + "\n"
     }
 
-    public type(name: string): SDLTypeDef {
-        const typeDec = new SDLTypeDef(name)
+    public interface(name: string): SDLInterfaceDef {
+        const dec = new SDLInterfaceDef(name)
+        this.interfaces.set(name, dec)
+        return dec
+    }
+
+    public type(name: string, _implements?: string): SDLTypeDef {
+        const typeDec = new SDLTypeDef(name, _implements)
         this.types.set(name, typeDec)
         return typeDec
     }
@@ -32,6 +40,10 @@ export class SDLSchema implements ISDLSchemaLineWriter {
         const union = new SDLUnionDef(name)
         this.unions.set(name, union)
         return union
+    }
+
+    public hasInterface(name: string): boolean {
+        return this.interfaces.has(name)
     }
 
     public hasType(name: string): boolean {
@@ -60,6 +72,10 @@ export class SDLSchema implements ISDLSchemaLineWriter {
 
         this.unions.forEach((u) => {
             u.write(this)
+        })
+
+        this.interfaces.forEach((i) => {
+            i.write(this)
         })
     }
 
