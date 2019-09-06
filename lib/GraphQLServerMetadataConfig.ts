@@ -16,6 +16,7 @@ interface ITypeClassifier {
 
 interface IQueryResolver {
     moduleResolvers(resolvers: ResolverCallbackRecord, modules: ModuleDescriptorIndex): void
+	wasmResolvers(resolvers: ResolverCallbackRecord): void
 }
 
 export class GraphQLServerMetadataConfig
@@ -25,11 +26,13 @@ export class GraphQLServerMetadataConfig
     protected typeClassifier: ITypeClassifier
     protected modules: ModuleDescriptorIndex
     protected queryResolver: IQueryResolver
+    protected queryWasmBuffer: Buffer
 
-    constructor(queryResolver: IQueryResolver, typeClassifier: ITypeClassifier, metadata: TMetadataVersion) {
+    constructor(queryResolver: IQueryResolver, typeClassifier: ITypeClassifier, metadata: TMetadataVersion, queryWasmBuffer: Buffer) {
         this.queryResolver = queryResolver
         this.typeClassifier = typeClassifier
         this.modules = {}
+		this.queryWasmBuffer = queryWasmBuffer
 
         if (metadata instanceof MetadataV3) {
             this.parseModulesV3(metadata)
@@ -51,11 +54,11 @@ export class GraphQLServerMetadataConfig
         }
 
         // FIXME! Remove this
-        if (MustStringCodec(input.name) !== "balances" &&
-            MustStringCodec(input.name) !== "timestamp" &&
-            MustStringCodec(input.name) !== "session" &&
-            MustStringCodec(input.name) !== "staking" &&
-            MustStringCodec(input.name) !== "system") {
+        if (/*MustStringCodec(input.name) !== "balances" && */
+            MustStringCodec(input.name) !== "timestamp") {
+//            MustStringCodec(input.name) !== "session" &&
+//            MustStringCodec(input.name) !== "staking" &&
+ //           MustStringCodec(input.name) !== "system") {
             return
         }
 
@@ -102,6 +105,7 @@ export class GraphQLServerMetadataConfig
     public get resolvers(): ResolverCallbackRecord {
         const resolvers: ResolverCallbackRecord = {}
         this.queryResolver.moduleResolvers(resolvers, this.modules)
+		this.queryResolver.wasmResolvers(resolvers)
         return resolvers
     }
 }

@@ -7,15 +7,21 @@ import { Phase } from "@polkadot/types/type/EventRecord"
 const chalk = require("chalk")
 const figlet = require("figlet")
 const log = require("npmlog")
+const fs = require("fs")
 import { App } from "../lib/App"
 
 // tslint:disable-next-line
 console.error = () => {}
 
+// FIXME! This will be loaded via an API request
+const queryBuffer = fs.readFileSync("../query-api/build/query.wasm")
+
+////////////////
+
 log.level = "verbose"
 
 function banner() {
-  log.info("cli", chalk.blue(figlet.textSync("joystream", "Speed")))
+    log.info("cli", chalk.blue(figlet.textSync("joystream", "Speed")))
 }
 
 // Register custom substrate types. This is required by the
@@ -30,25 +36,20 @@ registerJoystreamTypes();
     const api = await ApiPromise.create({
         provider: new WsProvider("ws://127.0.0.1:9944"),
         types: {
-
             // FIXME! Why aren't these registered?
-            Category: {},
-            CategoryId: {},
+            CategoryId: "U64",
+            Category: `{"id": "CategoryId", "title": "Text", "description": "Text", "deleted": "Bool", "archived": "Bool"}`,
             IPNSIdentity: {},
             InputValidationLengthConstraint: {},
             Post: {},
             PostId: {},
-            Thread: {},
-            ThreadId: {},
+            ThreadId: "U64",
+            Thread: `{"id": "ThreadId", "title": "Text", "author_id": "AccountId"}`,
             Url: {},
-
-            // FIXME: Is there a better way of doing this?
-            // Why isn't it registered by default?
-            Phase,
         },
     })
 
-    await new App(api).start()
+    await new App(api, queryBuffer).start()
 })().catch((err) => {
     log.error("cli", err.stack)
     process.exit(1)

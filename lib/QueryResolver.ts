@@ -10,6 +10,10 @@ import { StorageDescriptor } from "./StorageDescriptor"
 // FIXME! Remove and move to a new class
 import { IStructTypes } from "./TypeClassifier"
 
+interface IExecutor {
+	exec(name: string): any
+}
+
 interface IResolverCallbackArgs {
     block: number
 }
@@ -20,9 +24,11 @@ export type ResolverCallbackRecord = Record<string, ResolverCallback>
 
 export class QueryResolver {
     protected api: ApiPromiseInterface
+	protected executor: IExecutor
 
-    constructor(api: ApiPromiseInterface) {
+    constructor(api: ApiPromiseInterface, wasmExecutor: IExecutor) {
         this.api = api
+		this.executor = wasmExecutor
     }
 
     public typeValueToGraphQL(storage: StorageDescriptor, value: Codec): any {
@@ -89,6 +95,18 @@ export class QueryResolver {
             return output
         }
     }
+
+	// FIXME! Should Query be a QueryFactory, so that all memory is released each time?
+	public wasmResolvers(resolvers: ResolverCallbackRecord) {
+		// FIXME! Add the others; remove hardcoding
+		resolvers["forumCategories"] = this.wasmResolver("forumCategories")
+	}
+
+	protected wasmResolver(name: string): ResolverCallback {
+        return async (root: any, args: IResolverCallbackArgs, ctx: any, info: any) => {
+			return this.executor.exec(name)
+		}
+	}
 
     protected serialiseCodec<T extends Codec>(codec: T): any {
         if (codec instanceof Vector) {

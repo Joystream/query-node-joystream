@@ -1,4 +1,4 @@
-import { AccountId, EnumType, Hash, Struct, Tuple, Vector } from "@polkadot/types"
+import { AccountId, Bool, EnumType, Hash, Struct, Text, Tuple, Vector } from "@polkadot/types"
 import { getTypeClass, getTypeDef, TypeDef, TypeDefInfo } from "@polkadot/types/codec"
 import { TypeRegistry } from "@polkadot/types/codec/typeRegistry"
 import { default as Null } from "@polkadot/types/primitive/Null"
@@ -36,6 +36,7 @@ class ICodecMapping {
 
 const CodecMapping: ICodecMapping[] = [
     { codec: AccountId, SDL: "String" },
+    { codec: Bool, SDL: "Boolean" },
     { codec: Date, SDL: "Int" },
     { callback: (classifier: TypeClassifier, schema: SDLSchema, type: string, codec: Codec): SDLSchemaFragment => {
         // TODO! Create type which has optional values for each of the fields
@@ -57,6 +58,7 @@ const CodecMapping: ICodecMapping[] = [
       },
       codec: Tuple,
     },
+    { codec: Text, SDL: "String" },
     { codec: U32, SDL: "Int" },
     { codec: U64, SDL: "BigInt", customScalar: true },
     { codec: U128, SDL: "BigInt", customScalar: true },
@@ -241,6 +243,11 @@ export class TypeClassifier {
             const module = this.moduleSDLName(key)
             q.declaration(`${key}(block: BigInt = 0): ${module}`)
         }
+
+		// FIXME! This shouldn't be hardcoded, obviously
+		this.assertCodec("Category")
+		this.decodeStruct("Category", this.codecs["Category"] as Struct, schema)
+		q.declaration("forumCategories: [Category]")
     }
 
     public moduleBlocksSDL(schema: SDLSchema, modules: ModuleDescriptorIndex) {
