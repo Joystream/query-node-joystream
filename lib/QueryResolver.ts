@@ -4,15 +4,13 @@ import { Tuple, Vector } from "@polkadot/types"
 import { default as U32 } from "@polkadot/types/primitive/U32"
 import { Codec } from "@polkadot/types/types"
 import { stringLowerFirst } from "@polkadot/util"
+import { ILogger } from "../lib/Logger"
 import { ModuleDescriptor, ModuleDescriptorIndex } from "./ModuleDescriptor"
 import { StorageDescriptor } from "./StorageDescriptor"
+import { WASMInstance } from "./WASMInstance"
 
 // FIXME! Remove and move to a new class
 import { IStructTypes } from "./TypeClassifier"
-
-interface IExecutor {
-	exec(name: string): any
-}
 
 interface IResolverCallbackArgs {
     block: number
@@ -24,11 +22,13 @@ export type ResolverCallbackRecord = Record<string, ResolverCallback>
 
 export class QueryResolver {
     protected api: ApiPromiseInterface
-	protected executor: IExecutor
+    protected logger: ILogger
+    protected wasmBuffer: Buffer
 
-    constructor(api: ApiPromiseInterface, wasmExecutor: IExecutor) {
+    constructor(api: ApiPromiseInterface, logger: ILogger, wasmBuffer: Buffer) {
         this.api = api
-		this.executor = wasmExecutor
+        this.logger = logger
+        this.wasmBuffer = wasmBuffer
     }
 
     public typeValueToGraphQL(storage: StorageDescriptor, value: Codec): any {
@@ -96,17 +96,18 @@ export class QueryResolver {
         }
     }
 
-	// FIXME! Should Query be a QueryFactory, so that all memory is released each time?
-	public wasmResolvers(resolvers: ResolverCallbackRecord) {
-		// FIXME! Add the others; remove hardcoding
-		resolvers["forumCategories"] = this.wasmResolver("forumCategories")
-	}
+    // FIXME! Should Query be a QueryFactory, so that all memory is released each time?
+    public wasmResolvers(resolvers: ResolverCallbackRecord) {
+        // FIXME! Add the others; remove hardcoding
+        resolvers.forumCategories = this.wasmResolver("forumCategories")
+    }
 
-	protected wasmResolver(name: string): ResolverCallback {
+    protected wasmResolver(name: string): ResolverCallback {
+        const executor = new WASMInstance(this.wasmBuffer, this.api, this.logger)
         return async (root: any, args: IResolverCallbackArgs, ctx: any, info: any) => {
-			return this.executor.exec(name)
-		}
-	}
+            return executor.exec(name)
+        }
+    }
 
     protected serialiseCodec<T extends Codec>(codec: T): any {
         if (codec instanceof Vector) {

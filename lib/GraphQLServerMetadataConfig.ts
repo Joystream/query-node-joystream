@@ -16,7 +16,7 @@ interface ITypeClassifier {
 
 interface IQueryResolver {
     moduleResolvers(resolvers: ResolverCallbackRecord, modules: ModuleDescriptorIndex): void
-	wasmResolvers(resolvers: ResolverCallbackRecord): void
+    wasmResolvers(resolvers: ResolverCallbackRecord): void
 }
 
 export class GraphQLServerMetadataConfig
@@ -28,11 +28,15 @@ export class GraphQLServerMetadataConfig
     protected queryResolver: IQueryResolver
     protected queryWasmBuffer: Buffer
 
-    constructor(queryResolver: IQueryResolver, typeClassifier: ITypeClassifier, metadata: TMetadataVersion, queryWasmBuffer: Buffer) {
+    constructor(queryResolver: IQueryResolver,
+                typeClassifier: ITypeClassifier,
+                metadata: TMetadataVersion,
+                queryWasmBuffer: Buffer) {
+
         this.queryResolver = queryResolver
         this.typeClassifier = typeClassifier
         this.modules = {}
-		this.queryWasmBuffer = queryWasmBuffer
+        this.queryWasmBuffer = queryWasmBuffer
 
         if (metadata instanceof MetadataV3) {
             this.parseModulesV3(metadata)
@@ -105,7 +109,7 @@ export class GraphQLServerMetadataConfig
     public get resolvers(): ResolverCallbackRecord {
         const resolvers: ResolverCallbackRecord = {}
         this.queryResolver.moduleResolvers(resolvers, this.modules)
-		this.queryResolver.wasmResolvers(resolvers)
+        this.queryResolver.wasmResolvers(resolvers)
         return resolvers
     }
 }

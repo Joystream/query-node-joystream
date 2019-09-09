@@ -33,6 +33,7 @@ interface IType<T extends Codec = Codec>
     extends ICodecSDLClassifier<T>,
     ICodecSerialiser<T> {}
 
+// tslint:disable-next-line:max-classes-per-file
 export class Type<T extends Codec = Codec>
     implements IType<T> {
 
@@ -45,7 +46,6 @@ export class Type<T extends Codec = Codec>
             if (codec instanceof CodecMapping[i].codec) {
                 // FIXME! Test this. Does it need to be wrapped in a function?
                 const c = new CodecMapping[i].typeClass()
-                console.log("!!", c.serialise())
             }
         }
 

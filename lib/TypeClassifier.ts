@@ -244,10 +244,10 @@ export class TypeClassifier {
             q.declaration(`${key}(block: BigInt = 0): ${module}`)
         }
 
-		// FIXME! This shouldn't be hardcoded, obviously
-		this.assertCodec("Category")
-		this.decodeStruct("Category", this.codecs["Category"] as Struct, schema)
-		q.declaration("forumCategories: [Category]")
+        // FIXME! This shouldn't be hardcoded, obviously
+        this.assertCodec("Category")
+        this.decodeStruct("Category", this.codecs.Category as Struct, schema)
+        q.declaration("forumCategories: [Category]")
     }
 
     public moduleBlocksSDL(schema: SDLSchema, modules: ModuleDescriptorIndex) {
