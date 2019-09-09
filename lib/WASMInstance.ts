@@ -68,9 +68,10 @@ export class WASMInstance<T extends {}> {
     protected importsObject: IImports
     protected execDepth: number = 0
     protected execResolve?: PromiseResolver
-    protected execContext: any = [] // FIXME! Should be JSON builder
+    protected execContext: any = [] 
     protected execReference: any = this.execContext
     protected execReferenceStack: any = [this.execContext]
+    protected pointers = new Array<pointer<any>>()
 
     constructor(src: Buffer, api: ApiPromiseInterface, logger: ILogger) {
         const typedArray = new Uint8Array(src)
@@ -99,6 +100,11 @@ export class WASMInstance<T extends {}> {
             this.execResolve(this.execContext)
             this.execResolve = void 0
         }
+
+        while (this.pointers.length > 0) {
+            const ptr = this.pointers.pop()
+            this.module.__release(ptr as pointer<any>)
+        }
     }
 
     protected envModule(): IEnvImport {
@@ -126,6 +132,21 @@ export class WASMInstance<T extends {}> {
         return this.api.query[module][storage]()
     }
 
+    protected storePointer(ptr: pointer<any>): pointer<any> {
+        this.pointers.push(ptr)
+        return ptr
+    }
+
+    protected allocateStringJSONMap(): pointer<IJSONResponse> {
+        const ptr = this.module.glue.NewStringJsonMap()
+        return this.storePointer(ptr)
+    }
+
+    protected allocateString(value: string): pointer<string> {
+        const ptr = this.module.__retain(this.module.__allocString(value))
+        return this.storePointer(ptr)
+    }
+
     protected parseJson(input: any): pointer<IJSONResponse> {
         const output: IJSONResponse = { kind: JSONValueKind.NULL, value: 0 }
 
@@ -137,11 +158,11 @@ export class WASMInstance<T extends {}> {
 
             case "object":
                 // Make a new JSONObject
-                const raw = this.module.glue.NewStringJsonMap()
+                const raw = this.allocateStringJSONMap()
 
                 // FIXME! This doesn't work. Instantiate in WASM instead, and pass values directly
                 for (const key of Object.keys(input)) {
-                    this.module.glue.SetTypedMapEntry(raw, this.module.__allocString(key), this.parseJson(input[key]))
+                    this.module.glue.SetTypedMapEntry(raw, this.allocateString(key), this.parseJson(input[key]))
                 }
 
                 output.kind = JSONValueKind.OBJECT
@@ -150,7 +171,7 @@ export class WASMInstance<T extends {}> {
 
             case "string":
                 output.kind = JSONValueKind.STRING
-                output.value = this.module.__retain(this.module.__allocString(input))
+                output.value = this.allocateString(input)
                 break
 
             case "boolean":

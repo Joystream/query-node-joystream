@@ -103,8 +103,8 @@ export class QueryResolver {
     }
 
     protected wasmResolver(name: string): ResolverCallback {
-        const executor = new WASMInstance(this.wasmBuffer, this.api, this.logger)
         return async (root: any, args: IResolverCallbackArgs, ctx: any, info: any) => {
+            const executor = new WASMInstance(this.wasmBuffer, this.api, this.logger)
             return executor.exec(name)
         }
     }
