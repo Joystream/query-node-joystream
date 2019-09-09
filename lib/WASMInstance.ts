@@ -38,11 +38,11 @@ interface ITypedMap<K, V> extends IWrapper<ITypedMap<K, V>> {
 // FIXME! This should be read from the WASM blob, not mirrored like this
 enum JSONValueKind {
     NULL = 0,
-        BOOL = 1,
-        NUMBER = 2,
-        STRING = 3,
-        ARRAY = 4,
-        OBJECT = 5,
+    BOOL = 1,
+    NUMBER = 2,
+    STRING = 3,
+    ARRAY = 4,
+    OBJECT = 5,
 }
 
 interface IModuleGlue {
@@ -68,7 +68,7 @@ export class WASMInstance<T extends {}> {
     protected importsObject: IImports
     protected execDepth: number = 0
     protected execResolve?: PromiseResolver
-    protected execContext: any = [] 
+    protected execContext: any = []
     protected execReference: any = this.execContext
     protected execReferenceStack: any = [this.execContext]
     protected pointers = new Array<pointer<any>>()
@@ -186,11 +186,13 @@ export class WASMInstance<T extends {}> {
         return this.module.glue.NewJson(output.kind, output.value)
     }
 
-    protected handleApiRequestPromise(promise: Promise<Codec>, callback: pointer<() => void>) {
+    protected handleApiRequestPromise(promise: Promise<Codec>,
+                                      callback: pointer<() => void>,
+                                      callbackWrapper?: pointer<() => void>) {
         promise.then( (codec) => {
             const fn = this.importsObject.env.table.get(callback)
             if (fn !== null) {
-                fn(this.parseJson(codec.toJSON()))
+                fn(this.parseJson(codec.toJSON()), callbackWrapper)
             }
             this.execDepth--
             if (this.execDepth === 0) {
@@ -205,7 +207,6 @@ export class WASMInstance<T extends {}> {
 
     protected apiModule(): any {
         return {
-            // FIXME! Replace with APICall struct
             call: async (modulePtr: pointer<string>,
                          storagePtr: pointer<string>,
                          callback: pointer<() => void>) => {
@@ -214,15 +215,42 @@ export class WASMInstance<T extends {}> {
                 const storage = stringLowerFirst(this.module.__getString(storagePtr))
                 this.handleApiRequestPromise(this.apiCall(module, storage), callback)
             },
+
+            // CallWrapper is like call(), only it accepts a second function callback,
+            // which is then passed into the first callback pointer as an argument.
+            // This is used to work around dynamic function restrictions in AssemblyScript.
+            callWrapper: async (modulePtr: pointer<string>,
+                                storagePtr: pointer<string>,
+                                callback0: pointer<() => void>,
+                                callback1: pointer<() => void>) => {
+                this.execDepth++
+                const module = this.module.__getString(modulePtr)
+                const storage = stringLowerFirst(this.module.__getString(storagePtr))
+                this.handleApiRequestPromise(this.apiCall(module, storage), callback0, callback1)
+            },
+
             callWithArgNumber: async (modulePtr: pointer<string>,
                                       storagePtr: pointer<string>,
-                                      key: number, callback: pointer<() => void>) => {
+                                      key: number,
+                                      callback: pointer<() => void>) => {
                 this.execDepth++
                 const module = this.module.__getString(modulePtr)
                 const storage = stringLowerFirst(this.module.__getString(storagePtr))
                 this.handleApiRequestPromise(this.apiCall(module, storage, key), callback)
             },
 
+            // CallWithArgNumbeWrapper is like CallWrapper; it's used for getting around
+            // restrictions in AssemblyScript.
+            callWithArgNumberWrapper: async (modulePtr: pointer<string>,
+                                             storagePtr: pointer<string>,
+                                             key: number,
+                                             callback0: pointer<() => void>,
+                                             callback1: pointer<() => void>) => {
+                this.execDepth++
+                const module = this.module.__getString(modulePtr)
+                const storage = stringLowerFirst(this.module.__getString(storagePtr))
+                this.handleApiRequestPromise(this.apiCall(module, storage, key), callback0, callback1)
+            },
         }
     }
 
