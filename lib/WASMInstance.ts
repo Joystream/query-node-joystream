@@ -35,6 +35,12 @@ interface ITypedMap<K, V> extends IWrapper<ITypedMap<K, V>> {
     test: number
 }
 
+type IResolverWrapper = {}
+
+interface IResolverNamespace{
+    [index: string]: pointer<IResolverWrapper>
+}
+
 // FIXME! This should be read from the WASM blob, not mirrored like this
 enum JSONValueKind {
     NULL = 0,
@@ -49,14 +55,15 @@ interface IModuleGlue {
     NewStringJsonMap: () => pointer<IJSONResponse>
     SetTypedMapEntry(map: pointer<ITypedMap<string, JSON>>, key: pointer<string>, value: pointer<IJSONResponse>): void
     NewJson(kind: number, value: pointer<any>): pointer<IJSONResponse>
+    ResolveQuery(queryPtr: pointer<IResolverWrapper>): void
 }
 
 interface IQueryModule extends ASUtil {
     // Required exported classes
-    ID_STRINGJSONMAP: number
     JSON: IJSONResponse
     JSONValueKind: any
     glue: IModuleGlue
+    resolvers: IResolverNamespace
 }
 
 type PromiseResolver = (value: any) => void
@@ -89,9 +96,8 @@ export class WASMInstance<T extends {}> {
     public async exec(name: string): Promise<any> {
         const parent = this
         return new Promise<any>( (resolve, reject) => {
-            const obj = this.module as any
             parent.execResolve = resolve
-            obj[name]()
+            this.module.glue.ResolveQuery(this.module.resolvers[name])
         })
     }
 
