@@ -242,18 +242,28 @@ export class WASMInstance<T extends {} = {}> {
         return this.module.glue.NewJson(output.kind, output.value)
     }
 
+    protected dispatchApiReponse(codec: Codec, 
+                                 callback: pointer<() => void>,
+                                 callbackWrapper?: pointer<() => void>) {
+        const fn = this.importsObject.env.table.get(callback)
+        if (fn !== null) {
+            fn(this.parseJson(codec.toJSON()), callbackWrapper)
+        }
+    }
+
+    protected decreaseExecDepth() {
+        this.execDepth--
+        if (this.execDepth === 0) {
+            this.resolveExecution()
+        }
+    }
+
     protected handleApiRequestPromise(promise: Promise<Codec>,
                                       callback: pointer<() => void>,
                                       callbackWrapper?: pointer<() => void>) {
         promise.then( (codec) => {
-            const fn = this.importsObject.env.table.get(callback)
-            if (fn !== null) {
-                fn(this.parseJson(codec.toJSON()), callbackWrapper)
-            }
-            this.execDepth--
-            if (this.execDepth === 0) {
-                this.resolveExecution()
-            }
+            this.dispatchApiReponse(codec, callback, callbackWrapper)
+            this.decreaseExecDepth()
         }).catch((err) => {
             // FIXME! Signal error
             this.logger.error(err)
@@ -261,6 +271,22 @@ export class WASMInstance<T extends {} = {}> {
         })
     }
 
+    protected handleApiRequestPromiseArray(promises: Array<Promise<Codec>>,
+                                           callback: pointer<() => void>,
+                                           callbackWrapper?: pointer<() => void>) {
+        Promise.all(promises).then( (values) => {
+            for (let i = 0; i < values.length; i++) {
+                this.dispatchApiReponse(values[i], callback, callbackWrapper)
+            }
+            this.decreaseExecDepth()
+        }).catch((err) => {
+            // FIXME! Signal error
+            this.logger.error(err)
+            this.resolveExecution()
+        })
+    }
+
+    // FIXME! This is currently assuming all may keys are numbers!
     protected apiModule(): any {
         return {
             call: async (modulePtr: pointer<string>,
@@ -287,7 +313,7 @@ export class WASMInstance<T extends {} = {}> {
 
             callWithArgNumber: async (modulePtr: pointer<string>,
                                       storagePtr: pointer<string>,
-                                      key: number,
+                                      key: pointer<any>, // FIXME! Number assumed
                                       callback: pointer<() => void>) => {
                 this.execDepth++
                 const module = this.module.__getString(modulePtr)
@@ -299,7 +325,7 @@ export class WASMInstance<T extends {} = {}> {
             // restrictions in AssemblyScript.
             callWithArgNumberWrapper: async (modulePtr: pointer<string>,
                                              storagePtr: pointer<string>,
-                                             key: number,
+                                             key: pointer<any>, // FIXME! Number assumed
                                              callback0: pointer<() => void>,
                                              callback1: pointer<() => void>) => {
                 this.execDepth++
@@ -307,6 +333,26 @@ export class WASMInstance<T extends {} = {}> {
                 const storage = stringLowerFirst(this.module.__getString(storagePtr))
                 this.handleApiRequestPromise(this.apiCall(module, storage, key), callback0, callback1)
             },
+
+            // CallWithArgNumbeWrapperBatch is batching version of callWithArgNumberWrapper.
+            // It runs all the queries then makes the callbacks.
+            callWithArgNumberWrapperBatch: async (modulePtr: pointer<string>,
+                                             storagePtr: pointer<string>,
+                                             keysPtr: pointer<any[]>,
+                                             callback0: pointer<() => void>,
+                                             callback1: pointer<() => void>) => {
+                this.execDepth++
+                const module = this.module.__getString(modulePtr)
+                const storage = stringLowerFirst(this.module.__getString(storagePtr))
+                const promises:  Array<Promise<Codec>> = []
+                const keys = this.module.__getArray(keysPtr)
+
+                for (let i = 0; i < keys.length; i++) {
+                    promises.push(this.apiCall(module,storage,keys[i]))
+                }
+                this.handleApiRequestPromiseArray(promises, callback0, callback1)
+            },
+
         }
     }
 
