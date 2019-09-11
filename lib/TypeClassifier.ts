@@ -9,7 +9,10 @@ import { Codec } from "@polkadot/types/types"
 import { stringLowerFirst, stringUpperFirst } from "@polkadot/util"
 import { ModuleDescriptor, ModuleDescriptorIndex } from "./ModuleDescriptor"
 import { SDLSchema } from "./SDLSchema"
+import { SDLTypeDef } from "./SDLTypeDef"
 import { StorageType } from "./StorageDescriptor"
+import { TrimString } from "./util"
+import { IResolver, ResolverIndex } from "./WASMInstance"
 
 type SDLSchemaFragment = string
 
@@ -80,9 +83,9 @@ export class TypeClassifier {
         this.typeRegistry = typeRegistry
     }
 
-    public assertCodec(typeName: string) {
+    public assertCodec(typeName: string): Codec | null {
         if (typeof this.codecs[typeName] !== "undefined") {
-            return
+            return this.codecs[typeName]
         }
 
         const reg = this.typeRegistry.get(typeName)
@@ -90,6 +93,8 @@ export class TypeClassifier {
         if (typeof reg !== "undefined") {
             this.codecs[typeName] = new reg()
         }
+
+        return this.codecs[typeName]
     }
 
     public moduleSDLName(moduleName: string): SDLSchemaFragment {
@@ -236,7 +241,30 @@ export class TypeClassifier {
         return this.codecToSDL(type, codec, schema)
     }
 
-    public queryBlockSDL(schema: SDLSchema, modules: ModuleDescriptorIndex) {
+    // Given an SDL string, like "Type" or "[Type]", make sure it has
+    // a matching, parsed SDL definition.
+    protected assertCodecFromSDL(schema: SDLSchema, sdlName: string) {
+        const sdl = TrimString(sdlName,"[","]")
+        const codec = this.assertCodec(sdl)
+        if (codec !== null) {
+            this.codecToSDL(sdl, this.codecs[sdl], schema)
+        }
+    }
+
+	protected resolverSDL(schema: SDLSchema, 
+						  q: SDLTypeDef,  
+						  name: string,
+						  resolver: IResolver) {
+        this.assertCodecFromSDL(schema, resolver.returnTypeSDL)
+
+		//FIXME! Filters
+        q.declaration(name + ": " + resolver.returnTypeSDL)
+	}
+
+    public queryBlockSDL(schema: SDLSchema, 
+						 resolvers: ResolverIndex,
+						 modules: ModuleDescriptorIndex) {
+
         const q = schema.type("Query")
 
         for (const key of Object.keys(modules)) {
@@ -244,10 +272,9 @@ export class TypeClassifier {
             q.declaration(`${key}(block: BigInt = 0): ${module}`)
         }
 
-        // FIXME! This shouldn't be hardcoded, obviously
-        this.assertCodec("Category")
-        this.decodeStruct("Category", this.codecs.Category as Struct, schema)
-        q.declaration("forumCategories: [Category]")
+		for (const key of Object.keys(resolvers)) {
+			this.resolverSDL(schema, q, key, resolvers[key])
+		}
     }
 
     public moduleBlocksSDL(schema: SDLSchema, modules: ModuleDescriptorIndex) {

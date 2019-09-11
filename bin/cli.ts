@@ -9,12 +9,11 @@ const chalk = require("chalk")
 const log = require("npmlog")
 const fs = require("fs")
 import { App } from "../lib/App"
+import { WASMInstance } from "../lib/WASMInstance"
 
 // tslint:disable-next-line
 console.error = () => {}
 
-// FIXME! This will be loaded via an API request
-const queryBuffer = fs.readFileSync("../query-api/build/query.wasm")
 
 ////////////////
 
@@ -33,6 +32,9 @@ registerJoystreamTypes();
     const logger = new LoggerWrapper(log)
     banner(logger)
 
+	// FIXME! This will be loaded via an API request
+	const queryBuffer = fs.readFileSync("../query-api/build/query.wasm")
+
     // FIXME! Allow CLI-argument config for this
     const api = await ApiPromise.create({
         provider: new WsProvider("ws://127.0.0.1:9944"),
@@ -50,7 +52,9 @@ registerJoystreamTypes();
         },
     })
 
-    await new App(api, logger, queryBuffer).start()
+	const runtime = new WASMInstance(queryBuffer, api, logger)
+
+    await new App(api, logger, runtime).start()
 })().catch((err) => {
     log.error("cli", err.stack)
     process.exit(1)

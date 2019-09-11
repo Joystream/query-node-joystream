@@ -8,15 +8,20 @@ import { ResolverCallbackRecord } from "./QueryResolver"
 import { SDLSchema } from "./SDLSchema"
 import { StorageDescriptor, StorageType } from "./StorageDescriptor"
 import { MustStringCodec } from "./util"
+import { ResolverIndex } from "./WASMInstance"
 
 interface ITypeClassifier {
-    queryBlockSDL(schema: SDLSchema, modules: ModuleDescriptorIndex): void
+    queryBlockSDL(schema: SDLSchema, resolvers: ResolverIndex, modules: ModuleDescriptorIndex): void
     moduleBlocksSDL(schema: SDLSchema, modules: ModuleDescriptorIndex): void
 }
 
 interface IQueryResolver {
     moduleResolvers(resolvers: ResolverCallbackRecord, modules: ModuleDescriptorIndex): void
     wasmResolvers(resolvers: ResolverCallbackRecord): void
+}
+
+interface IResolverSource {
+    resolvers(): ResolverIndex
 }
 
 export class GraphQLServerMetadataConfig
@@ -26,17 +31,17 @@ export class GraphQLServerMetadataConfig
     protected typeClassifier: ITypeClassifier
     protected modules: ModuleDescriptorIndex
     protected queryResolver: IQueryResolver
-    protected queryWasmBuffer: Buffer
+    protected queryRuntime: IResolverSource
 
     constructor(queryResolver: IQueryResolver,
                 typeClassifier: ITypeClassifier,
                 metadata: TMetadataVersion,
-                queryWasmBuffer: Buffer) {
+                queryRuntime: IResolverSource) {
 
         this.queryResolver = queryResolver
         this.typeClassifier = typeClassifier
         this.modules = {}
-        this.queryWasmBuffer = queryWasmBuffer
+        this.queryRuntime = queryRuntime
 
         if (metadata instanceof MetadataV3) {
             this.parseModulesV3(metadata)
@@ -100,7 +105,12 @@ export class GraphQLServerMetadataConfig
 
     public get SDL(): string {
         const schema = new SDLSchema()
-        this.typeClassifier.queryBlockSDL(schema, this.modules)
+
+        this.typeClassifier.queryBlockSDL(
+            schema, 
+            this.queryRuntime.resolvers(), 
+            this.modules)
+
         this.typeClassifier.moduleBlocksSDL(schema, this.modules)
         schema.end()
         return schema.SDL

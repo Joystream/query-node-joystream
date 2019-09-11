@@ -35,6 +35,13 @@ interface ITypedMap<K, V> extends IWrapper<ITypedMap<K, V>> {
     test: number
 }
 
+export interface IResolver {
+    returnTypeSDL: string
+    filters: string[]
+}
+
+export type ResolverIndex = Record<string, IResolver>
+
 type IResolverWrapper = {}
 
 interface IResolverNamespace{
@@ -56,6 +63,8 @@ interface IModuleGlue {
     SetTypedMapEntry(map: pointer<ITypedMap<string, JSON>>, key: pointer<string>, value: pointer<IJSONResponse>): void
     NewJson(kind: number, value: pointer<any>): pointer<IJSONResponse>
     ResolveQuery(queryPtr: pointer<IResolverWrapper>): void
+    ResolverType(queryPtr: pointer<IResolverWrapper>): pointer<string>
+    ResolverParams(queryPtr: pointer<IResolverWrapper>): pointer<string[]>
 }
 
 interface IQueryModule extends ASUtil {
@@ -68,7 +77,7 @@ interface IQueryModule extends ASUtil {
 
 type PromiseResolver = (value: any) => void
 
-export class WASMInstance<T extends {}> {
+export class WASMInstance<T extends {} = {}> {
     public module: IQueryModule
     protected api: ApiPromiseInterface
     protected logger: ILogger
@@ -101,6 +110,39 @@ export class WASMInstance<T extends {}> {
         })
     }
 
+    public resolvers(): ResolverIndex {
+        const output:ResolverIndex = {}
+
+        for (const key of Object.keys(this.module.resolvers)) {
+            output[key] = {
+                returnTypeSDL: this.module.__getString(
+                    this.module.glue.ResolverType(
+                        this.module.resolvers[key]
+                        )
+                    ),
+                filters: this.stringArrayFromPointer(
+                    this.module.__getArray(
+                        this.module.glue.ResolverParams(
+                            this.module.resolvers[key]
+                        )
+                    )
+                )
+            }
+
+        }
+        return output
+    }
+
+    protected stringArrayFromPointer(input: pointer<string>[]): string[] {
+        const output:string[] = []
+
+        for (let i = 0; i < input.length; i++) {
+            output.push(this.module.__getString(input[i]))
+        }
+
+        return output
+    }
+
     protected resolveExecution() {
         if (typeof this.execResolve !== "undefined") {
             this.execResolve(this.execContext)
@@ -111,6 +153,14 @@ export class WASMInstance<T extends {}> {
             const ptr = this.pointers.pop()
             this.module.__release(ptr as pointer<any>)
         }
+
+        this.resetExecStack()
+    }
+
+    protected resetExecStack() {
+        this.execContext = []
+        this.execReference = this.execContext
+        this.execReferenceStack = [this.execContext]
     }
 
     protected envModule(): IEnvImport {

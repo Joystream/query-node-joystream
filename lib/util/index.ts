@@ -6,3 +6,15 @@ export function MustStringCodec(codec: Codec | undefined): string {
     }
     throw new Error("Undefined codec string")
 }
+
+export function TrimString(str:string, ch0:string, ch1:string) {
+    var start = 0, end = str.length
+
+    while(start < end && str[start] === ch0)
+        ++start
+
+    while(end > start && str[end - 1] === ch1)
+        --end
+
+    return (start > 0 || end < str.length) ? str.substring(start, end) : str
+}

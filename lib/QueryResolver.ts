@@ -23,12 +23,12 @@ export type ResolverCallbackRecord = Record<string, ResolverCallback>
 export class QueryResolver {
     protected api: ApiPromiseInterface
     protected logger: ILogger
-    protected wasmBuffer: Buffer
+    protected executor: WASMInstance // FIXME! Map interace instead
 
-    constructor(api: ApiPromiseInterface, logger: ILogger, wasmBuffer: Buffer) {
+    constructor(api: ApiPromiseInterface, logger: ILogger, queryRuntime: WASMInstance) {
         this.api = api
         this.logger = logger
-        this.wasmBuffer = wasmBuffer
+        this.executor = queryRuntime
     }
 
     public typeValueToGraphQL(storage: StorageDescriptor, value: Codec): any {
@@ -104,8 +104,7 @@ export class QueryResolver {
 
     protected wasmResolver(name: string): ResolverCallback {
         return async (root: any, args: IResolverCallbackArgs, ctx: any, info: any) => {
-            const executor = new WASMInstance(this.wasmBuffer, this.api, this.logger)
-            return executor.exec(name)
+            return this.executor.exec(name)
         }
     }
 
