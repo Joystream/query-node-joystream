@@ -792,7 +792,7 @@ arrify@^1.0.1:
 
 "assemblyscript@github:AssemblyScript/assemblyscript":
   version "0.7.0"
-  resolved "https://codeload.github.com/AssemblyScript/assemblyscript/tar.gz/9ba81629b5ffeb0278340fe55f97abca8c5775ef"
+  resolved "https://codeload.github.com/AssemblyScript/assemblyscript/tar.gz/22c4cf42f05bd8610e5f8924d27a5b8636405a6d"
   dependencies:
     "@protobufjs/utf8" "^1.1.0"
     binaryen "87.0.0-nightly.20190716"
@@ -907,10 +907,10 @@ binary-extensions@^1.0.0:
   resolved "https://registry.yarnpkg.com/binary-extensions/-/binary-extensions-1.13.1.tgz#598afe54755b2868a5330d2aff9d4ebb53209b65"
   integrity sha512-Un7MIEDdUC5gNpcGDV97op1Ywk748MpHcFTHoYs6qnj1Z3j7I53VG3nwZhKzoBZmbdRNnb6WRdFlwl7tSDuZGw==
 
-binaryen@87.0.0-nightly.20190716:
-  version "87.0.0-nightly.20190716"
-  resolved "https://registry.yarnpkg.com/binaryen/-/binaryen-87.0.0-nightly.20190716.tgz#5aaad26885c53cfac3163d21592cea46e3ed5c64"
-  integrity sha512-qRGfV8cLV4HVVo1oUCtTaDmOhbwctaW7vyW0G6HKftywWOJI9t9IsCrUEFKya50RqyEnanuS2w3nfOg4bxTGqg==
+binaryen@89.0.0-nightly.20190909:
+  version "89.0.0-nightly.20190909"
+  resolved "https://registry.yarnpkg.com/binaryen/-/binaryen-89.0.0-nightly.20190909.tgz#f3affc2430cfc1c19ba55daaf31f84210f1773ce"
+  integrity sha512-IQZjTZ5K8no8SJLQ8j6g8CgTQ98bHVYaqFYEKl8y4i+Z+Vev702b7arjIJq9mn10F4uvL4qqOYI1f7zGteChhA==
 
 bindings@^1.5.0:
   version "1.5.0"
@@ -4714,7 +4714,7 @@ source-map-resolve@^0.5.0:
     source-map-url "^0.4.0"
     urix "^0.1.0"
 
-source-map-support@^0.5.1, source-map-support@^0.5.12:
+source-map-support@^0.5.1, source-map-support@^0.5.13:
   version "0.5.13"
   resolved "https://registry.yarnpkg.com/source-map-support/-/source-map-support-0.5.13.tgz#31b24a9c2e73c2de85066c0feb7d44767ed52932"
   integrity sha512-SHSKFHadjVA5oR4PPqhtAVdcBWwRYVd6g6cAXnIbRiIwc2EhPrTuKUBdSLvlEKyIP3GCf89fltvcZiP9MMFA1w==

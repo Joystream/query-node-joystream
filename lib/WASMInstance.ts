@@ -35,6 +35,8 @@ interface ITypedMap<K, V> extends IWrapper<ITypedMap<K, V>> {
     test: number
 }
 
+type Context = {}
+
 export interface IResolver {
     returnTypeSDL: string
     filters: string[]
@@ -60,9 +62,10 @@ enum JSONValueKind {
 
 interface IModuleGlue {
     NewStringJsonMap: () => pointer<IJSONResponse>
-    SetTypedMapEntry(map: pointer<ITypedMap<string, JSON>>, key: pointer<string>, value: pointer<IJSONResponse>): void
+    SetTypedMapEntry(map: pointer<ITypedMap<string, IJSONResponse>>, key: pointer<string>, value: pointer<IJSONResponse>): void
     NewJson(kind: number, value: pointer<any>): pointer<IJSONResponse>
-    ResolveQuery(queryPtr: pointer<IResolverWrapper>): void
+    NewContext(params: pointer<ITypedMap<string, IJSONResponse>>): pointer<Context>
+    ResolveQuery(queryPtr: pointer<IResolverWrapper>, ctx: pointer<Context>): void
     ResolverType(queryPtr: pointer<IResolverWrapper>): pointer<string>
     ResolverParams(queryPtr: pointer<IResolverWrapper>): pointer<string[]>
 }
@@ -106,7 +109,7 @@ export class WASMInstance<T extends {} = {}> {
         const parent = this
         return new Promise<any>( (resolve, reject) => {
             parent.execResolve = resolve
-            this.module.glue.ResolveQuery(this.module.resolvers[name])
+            this.module.glue.ResolveQuery(this.module.resolvers[name], this.newContext())
         })
     }
 
@@ -133,6 +136,11 @@ export class WASMInstance<T extends {} = {}> {
         return output
     }
 
+    protected newContext(): pointer<Context> {
+        const jsonPtr = 0 // FIXME! Allocate JSON array for params 
+        return this.module.glue.NewContext(jsonPtr)
+    }
+
     protected stringArrayFromPointer(input: pointer<string>[]): string[] {
         const output:string[] = []
 
@@ -143,7 +151,7 @@ export class WASMInstance<T extends {} = {}> {
         return output
     }
 
-    protected resolveExecution() {
+    protected resolveExecution(ctx: pointer<Context>) {
         if (typeof this.execResolve !== "undefined") {
             this.execResolve(this.execContext)
             this.execResolve = void 0
@@ -153,6 +161,8 @@ export class WASMInstance<T extends {} = {}> {
             const ptr = this.pointers.pop()
             this.module.__release(ptr as pointer<any>)
         }
+
+        this.module.__release(ctx)
 
         this.resetExecStack()
     }
@@ -242,88 +252,95 @@ export class WASMInstance<T extends {} = {}> {
         return this.module.glue.NewJson(output.kind, output.value)
     }
 
-    protected dispatchApiReponse(codec: Codec, 
+    protected dispatchApiReponse(ctx: pointer<Context>,
+                                 codec: Codec, 
                                  callback: pointer<() => void>,
                                  callbackWrapper?: pointer<() => void>) {
         const fn = this.importsObject.env.table.get(callback)
         if (fn !== null) {
-            fn(this.parseJson(codec.toJSON()), callbackWrapper)
+            fn(ctx, this.parseJson(codec.toJSON()), callbackWrapper)
         }
     }
 
-    protected decreaseExecDepth() {
+    protected decreaseExecDepth(ctx: pointer<Context>) {
         this.execDepth--
         if (this.execDepth === 0) {
-            this.resolveExecution()
+            this.resolveExecution(ctx)
         }
     }
 
-    protected handleApiRequestPromise(promise: Promise<Codec>,
+    protected handleApiRequestPromise(ctx: pointer<Context>,
+                                      promise: Promise<Codec>,
                                       callback: pointer<() => void>,
                                       callbackWrapper?: pointer<() => void>) {
         promise.then( (codec) => {
-            this.dispatchApiReponse(codec, callback, callbackWrapper)
-            this.decreaseExecDepth()
+            this.dispatchApiReponse(ctx, codec, callback, callbackWrapper)
+            this.decreaseExecDepth(ctx)
         }).catch((err) => {
             // FIXME! Signal error
             this.logger.error(err)
-            this.resolveExecution()
+            this.resolveExecution(ctx)
         })
     }
 
-    protected handleApiRequestPromiseArray(promises: Array<Promise<Codec>>,
+    protected handleApiRequestPromiseArray(ctx: pointer<Context>,
+                                           promises: Array<Promise<Codec>>,
                                            callback: pointer<() => void>,
                                            callbackWrapper?: pointer<() => void>) {
         Promise.all(promises).then( (values) => {
             for (let i = 0; i < values.length; i++) {
-                this.dispatchApiReponse(values[i], callback, callbackWrapper)
+                this.dispatchApiReponse(ctx, values[i], callback, callbackWrapper)
             }
-            this.decreaseExecDepth()
+            this.decreaseExecDepth(ctx)
         }).catch((err) => {
             // FIXME! Signal error
             this.logger.error(err)
-            this.resolveExecution()
+            this.resolveExecution(ctx)
         })
     }
 
     // FIXME! This is currently assuming all may keys are numbers!
     protected apiModule(): any {
         return {
-            call: async (modulePtr: pointer<string>,
+            call: async (context: pointer<Context>,
+                         modulePtr: pointer<string>,
                          storagePtr: pointer<string>,
                          callback: pointer<() => void>) => {
                 this.execDepth++
                 const module = this.module.__getString(modulePtr)
                 const storage = stringLowerFirst(this.module.__getString(storagePtr))
-                this.handleApiRequestPromise(this.apiCall(module, storage), callback)
+                this.handleApiRequestPromise(context, this.apiCall(module, storage), callback)
             },
 
             // CallWrapper is like call(), only it accepts a second function callback,
             // which is then passed into the first callback pointer as an argument.
             // This is used to work around dynamic function restrictions in AssemblyScript.
-            callWrapper: async (modulePtr: pointer<string>,
+            callWrapper: async (context: pointer<Context>,
+                                modulePtr: pointer<string>,
                                 storagePtr: pointer<string>,
                                 callback0: pointer<() => void>,
                                 callback1: pointer<() => void>) => {
                 this.execDepth++
                 const module = this.module.__getString(modulePtr)
                 const storage = stringLowerFirst(this.module.__getString(storagePtr))
-                this.handleApiRequestPromise(this.apiCall(module, storage), callback0, callback1)
+                this.handleApiRequestPromise(context, this.apiCall(module, storage), callback0, callback1)
             },
 
-            callWithArgNumber: async (modulePtr: pointer<string>,
+            callWithArgNumber: async (context: pointer<Context>,
+                                      modulePtr: pointer<string>,
                                       storagePtr: pointer<string>,
                                       key: pointer<any>, // FIXME! Number assumed
                                       callback: pointer<() => void>) => {
                 this.execDepth++
                 const module = this.module.__getString(modulePtr)
                 const storage = stringLowerFirst(this.module.__getString(storagePtr))
-                this.handleApiRequestPromise(this.apiCall(module, storage, key), callback)
+                this.handleApiRequestPromise(context, this.apiCall(module, storage, key), callback)
             },
 
             // CallWithArgNumbeWrapper is like CallWrapper; it's used for getting around
             // restrictions in AssemblyScript.
-            callWithArgNumberWrapper: async (modulePtr: pointer<string>,
+            callWithArgNumberWrapper: async (context: pointer<Context>,
+                                             modulePtr: pointer<string>,
                                              storagePtr: pointer<string>,
                                              key: pointer<any>, // FIXME! Number assumed
                                              callback0: pointer<() => void>,
@@ -331,16 +348,17 @@ export class WASMInstance<T extends {} = {}> {
                 this.execDepth++
                 const module = this.module.__getString(modulePtr)
                 const storage = stringLowerFirst(this.module.__getString(storagePtr))
-                this.handleApiRequestPromise(this.apiCall(module, storage, key), callback0, callback1)
+                this.handleApiRequestPromise(context, this.apiCall(module, storage, key), callback0, callback1)
             },
 
             // CallWithArgNumbeWrapperBatch is batching version of callWithArgNumberWrapper.
             // It runs all the queries then makes the callbacks.
-            callWithArgNumberWrapperBatch: async (modulePtr: pointer<string>,
-                                             storagePtr: pointer<string>,
-                                             keysPtr: pointer<any[]>,
-                                             callback0: pointer<() => void>,
-                                             callback1: pointer<() => void>) => {
+            callWithArgNumberWrapperBatch: async (context: pointer<Context>,
+                                                  modulePtr: pointer<string>,
+                                                  storagePtr: pointer<string>,
+                                                  keysPtr: pointer<any[]>,
+                                                  callback0: pointer<() => void>,
+                                                  callback1: pointer<() => void>) => {
                 this.execDepth++
                 const module = this.module.__getString(modulePtr)
                 const storage = stringLowerFirst(this.module.__getString(storagePtr))
@@ -350,7 +368,7 @@ export class WASMInstance<T extends {} = {}> {
                 for (let i = 0; i < keys.length; i++) {
                     promises.push(this.apiCall(module,storage,keys[i]))
                 }
-                this.handleApiRequestPromiseArray(promises, callback0, callback1)
+                this.handleApiRequestPromiseArray(context, promises, callback0, callback1)
             },
 
         }
