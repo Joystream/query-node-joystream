@@ -447,14 +447,20 @@ export class WASMInstance<T extends {} = {}> {
             numberField: (context: pointer<Context>, keyPtr: pointer<string>, value: number) => {
                 this.getExecutionContext(context).numberField(keyPtr, value)
             },
+
             popObject: (context: pointer<Context>) => {
+                this.getExecutionContext(context).popObject()
+
             },
+
             pushObject: (context: pointer<Context>) => {
                 this.getExecutionContext(context).pushObject()
             },
+
             pushString: (context: pointer<Context>, value: pointer<string>) => {
                 this.getExecutionContext(context).pushString(value)
             },
+
             stringField: (context: pointer<Context>, keyPtr: pointer<string>, valuePtr: pointer<string>) => {
                 this.getExecutionContext(context).stringField(keyPtr, valuePtr)
             },
