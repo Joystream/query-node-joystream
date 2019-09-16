@@ -241,29 +241,9 @@ export class TypeClassifier {
         return this.codecToSDL(type, codec, schema)
     }
 
-    // Given an SDL string, like "Type" or "[Type]", make sure it has
-    // a matching, parsed SDL definition.
-    protected assertCodecFromSDL(schema: SDLSchema, sdlName: string) {
-        const sdl = TrimString(sdlName,"[","]")
-        const codec = this.assertCodec(sdl)
-        if (codec !== null) {
-            this.codecToSDL(sdl, this.codecs[sdl], schema)
-        }
-    }
-
-	protected resolverSDL(schema: SDLSchema, 
-						  q: SDLTypeDef,  
-						  name: string,
-						  resolver: IResolver) {
-        this.assertCodecFromSDL(schema, resolver.returnTypeSDL)
-
-		//FIXME! Filters
-        q.declaration(name + ": " + resolver.returnTypeSDL)
-	}
-
-    public queryBlockSDL(schema: SDLSchema, 
-						 resolvers: ResolverIndex,
-						 modules: ModuleDescriptorIndex) {
+    public queryBlockSDL(schema: SDLSchema,
+                         resolvers: ResolverIndex,
+                         modules: ModuleDescriptorIndex) {
 
         const q = schema.type("Query")
 
@@ -272,9 +252,9 @@ export class TypeClassifier {
             q.declaration(`${key}(block: BigInt = 0): ${module}`)
         }
 
-		for (const key of Object.keys(resolvers)) {
-			this.resolverSDL(schema, q, key, resolvers[key])
-		}
+        for (const key of Object.keys(resolvers)) {
+            this.resolverSDL(schema, q, key, resolvers[key])
+        }
     }
 
     public moduleBlocksSDL(schema: SDLSchema, modules: ModuleDescriptorIndex) {
@@ -297,5 +277,25 @@ export class TypeClassifier {
             m.declaration(variable.APIName + ": " + this.stringTypeToSDL(schema, variable.innerType))
         }
         m.end()
+    }
+
+    // Given an SDL string, like "Type" or "[Type]", make sure it has
+    // a matching, parsed SDL definition.
+    protected assertCodecFromSDL(schema: SDLSchema, sdlName: string) {
+        const sdl = TrimString(sdlName, "[", "]")
+        const codec = this.assertCodec(sdl)
+        if (codec !== null) {
+            this.codecToSDL(sdl, this.codecs[sdl], schema)
+        }
+    }
+
+    protected resolverSDL(schema: SDLSchema,
+                          q: SDLTypeDef,
+                          name: string,
+                          resolver: IResolver) {
+        this.assertCodecFromSDL(schema, resolver.returnTypeSDL)
+
+        // FIXME! Filters
+        q.declaration(name + ": " + resolver.returnTypeSDL)
     }
 }

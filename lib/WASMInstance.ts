@@ -2,9 +2,10 @@ import { ApiPromiseInterface } from "@polkadot/api/promise/types"
 import { Codec } from "@polkadot/types/types"
 import { stringLowerFirst } from "@polkadot/util"
 import { ASUtil, instantiateBuffer } from "assemblyscript/lib/loader"
-import { ILogger } from "../lib/Logger"
+import { ILogger } from "./Logger"
+import { ResolverExecutionContext } from "./ResolverExecutionContext"
 
-type pointer<T= {}> = number
+export type pointer<T= {}> = number
 
 interface IEnvImport extends Record<string, any> {
     memory: WebAssembly.Memory,
@@ -35,8 +36,6 @@ interface ITypedMap<K, V> extends IWrapper<ITypedMap<K, V>> {
     test: number
 }
 
-type Context = {}
-
 export interface IResolver {
     returnTypeSDL: string
     filters: string[]
@@ -44,9 +43,9 @@ export interface IResolver {
 
 export type ResolverIndex = Record<string, IResolver>
 
-type IResolverWrapper = {}
+interface IResolverWrapper {}
 
-interface IResolverNamespace{
+interface IResolverNamespace {
     [index: string]: pointer<IResolverWrapper>
 }
 
@@ -64,8 +63,8 @@ interface IModuleGlue {
     NewStringJsonMap: () => pointer<IJSONResponse>
     SetTypedMapEntry(map: pointer<ITypedMap<string, IJSONResponse>>, key: pointer<string>, value: pointer<IJSONResponse>): void
     NewJson(kind: number, value: pointer<any>): pointer<IJSONResponse>
-    NewContext(params: pointer<ITypedMap<string, IJSONResponse>>): pointer<Context>
-    ResolveQuery(queryPtr: pointer<IResolverWrapper>, ctx: pointer<Context>): void
+    NewContext(params: pointer<ITypedMap<string, IJSONResponse>>): pointer<ResolverExecutionContext>
+    ResolveQuery(queryPtr: pointer<IResolverWrapper>, ctx: pointer<ResolverExecutionContext>): void
     ResolverType(queryPtr: pointer<IResolverWrapper>): pointer<string>
     ResolverParams(queryPtr: pointer<IResolverWrapper>): pointer<string[]>
 }
@@ -78,91 +77,12 @@ interface IQueryModule extends ASUtil {
     resolvers: IResolverNamespace
 }
 
-type PromiseResolver = (value: any) => void
-
-export class ResolverExecutionContext {
-    protected parent: WASMInstance
-	protected contexPtr: pointer<Context>
-    protected execResolve: PromiseResolver
-    protected execDepth: number = 0
-    protected execContext: any = []
-    protected execReference: any = this.execContext
-    protected execReferenceStack: any = [this.execContext]
-    protected pointers = new Array<pointer<any>>()
-
-    constructor(parent: WASMInstance, ptr: pointer<Context>, execResolve: PromiseResolver) {
-        this.parent = parent
-		this.contexPtr = ptr
-        this.execResolve = execResolve
-    }
-
-	toPointer(): pointer<Context> {
-		return this.contexPtr
-	}
-
-    numberField(keyPtr: pointer<string>, value: number) {
-        const key = this.parent.module.__getString(keyPtr)
-        this.execReference[key] = value
-    }
-
-    popObject() {
-        this.execReferenceStack.pop()
-        this.execReference = this.execReferenceStack[this.execReferenceStack.length - 1]
-    }
-
-    pushObject() {
-        const object = {}
-        this.execReference = object
-        this.execReferenceStack.push(object)
-        this.execContext.push(object)
-    }
-
-    pushString(value: pointer<string>) {
-        this.execReference.push(this.parent.module.__getString(value))
-    }
-
-    stringField(keyPtr: pointer<string>, valuePtr: pointer<string>) {
-        const key = this.parent.module.__getString(keyPtr)
-        const value = this.parent.module.__getString(valuePtr)
-        this.execReference[key] = value
-    }
-
-    storePointer(ptr: pointer<any>): pointer<any> {
-        this.pointers.push(ptr)
-        return ptr
-    }
-
-    resolveExecution() {
-        if (typeof this.execResolve !== "undefined") {
-            this.execResolve(this.execContext)
-        }
-
-        while (this.pointers.length > 0) {
-            const ptr = this.pointers.pop()
-            this.parent.module.__release(ptr as pointer<any>)
-        }
-
-        this.parent.deleteContext(this.contexPtr)
-    }
-
-    increaseExecDepth(depth:number = 1) {
-        this.execDepth += depth
-    }
-
-    decreaseExecDepth(depth: number = 1) {
-        this.execDepth -= depth
-        if (this.execDepth === 0) {
-            this.resolveExecution()
-        }
-    }
-}
-
 export class WASMInstance<T extends {} = {}> {
     public module: IQueryModule
     protected api: ApiPromiseInterface
     protected logger: ILogger
     protected importsObject: IImports
-    protected executionContexts = new Map<pointer<Context>, ResolverExecutionContext>()
+    protected executionContexts = new Map<pointer<ResolverExecutionContext>, ResolverExecutionContext>()
 
     constructor(src: Buffer, api: ApiPromiseInterface, logger: ILogger) {
         const typedArray = new Uint8Array(src)
@@ -185,29 +105,35 @@ export class WASMInstance<T extends {} = {}> {
     }
 
     public resolvers(): ResolverIndex {
-        const output:ResolverIndex = {}
+        const output: ResolverIndex = {}
 
         for (const key of Object.keys(this.module.resolvers)) {
             output[key] = {
                 returnTypeSDL: this.module.__getString(
                     this.module.glue.ResolverType(
-                        this.module.resolvers[key]
-                        )
+                        this.module.resolvers[key],
+                        ),
                     ),
                 filters: this.stringArrayFromPointer(
                     this.module.__getArray(
                         this.module.glue.ResolverParams(
-                            this.module.resolvers[key]
-                        )
-                    )
-                )
+                            this.module.resolvers[key],
+                        ),
+                    ),
+                ),
             }
 
         }
+
         return output
     }
 
-    protected getExecutionContext(ctx: pointer<Context>): ResolverExecutionContext {
+    public deleteContext(ptr: pointer<ResolverExecutionContext>) {
+        this.executionContexts.delete(ptr)
+        this.module.__release(ptr)
+    }
+
+    protected getExecutionContext(ctx: pointer<ResolverExecutionContext>): ResolverExecutionContext {
         const c = this.executionContexts.get(ctx)
         if (typeof c !== "undefined") {
             return c
@@ -216,18 +142,13 @@ export class WASMInstance<T extends {} = {}> {
         throw new Error("No execution context for pointer " + ctx)
     }
 
-    public deleteContext(ptr: pointer<Context>) {
-        this.executionContexts.delete(ptr)
-        this.module.__release(ptr)
-    }
-
-    protected newContext(): pointer<Context> {
+    protected newContext(): pointer<ResolverExecutionContext> {
         const jsonPtr = 0 // FIXME! Allocate JSON array for params, and free after
         return this.module.glue.NewContext(jsonPtr)
     }
 
-    protected stringArrayFromPointer(input: pointer<string>[]): string[] {
-        const output:string[] = []
+    protected stringArrayFromPointer(input: Array<pointer<string>>): string[] {
+        const output: string[] = []
 
         for (let i = 0; i < input.length; i++) {
             output.push(this.module.__getString(input[i]))
@@ -286,9 +207,9 @@ export class WASMInstance<T extends {} = {}> {
 
                 // FIXME! This doesn't work. Instantiate in WASM instead, and pass values directly
                 for (const key of Object.keys(input)) {
-                    this.module.glue.SetTypedMapEntry(raw, 
-													  this.allocateString(ctx, key), 
-													  this.parseJson(ctx, input[key]))
+                    this.module.glue.SetTypedMapEntry(raw,
+                                                      this.allocateString(ctx, key),
+                                                      this.parseJson(ctx, input[key]))
                 }
 
                 output.kind = JSONValueKind.OBJECT
@@ -313,7 +234,7 @@ export class WASMInstance<T extends {} = {}> {
     }
 
     protected dispatchApiReponse(ctx: ResolverExecutionContext,
-                                 codec: Codec, 
+                                 codec: Codec,
                                  callback: pointer<() => void>,
                                  callbackWrapper?: pointer<() => void>) {
         const fn = this.importsObject.env.table.get(callback)
@@ -355,84 +276,84 @@ export class WASMInstance<T extends {} = {}> {
     // FIXME! This is currently assuming all may keys are numbers!
     protected apiModule(): any {
         return {
-            call: async (context: pointer<Context>,
+            call: async (context: pointer<ResolverExecutionContext>,
                          modulePtr: pointer<string>,
                          storagePtr: pointer<string>,
                          callback: pointer<() => void>) => {
-			    const ec = this.getExecutionContext(context)
-				ec.increaseExecDepth()
+                const ec = this.getExecutionContext(context)
+                ec.increaseExecDepth()
                 const module = this.module.__getString(modulePtr)
                 const storage = stringLowerFirst(this.module.__getString(storagePtr))
                 this.handleApiRequestPromise(ec,
-											 this.apiCall(module, storage), 
-											 callback)
+                                             this.apiCall(module, storage),
+                                             callback)
             },
 
             // CallWrapper is like call(), only it accepts a second function callback,
             // which is then passed into the first callback pointer as an argument.
             // This is used to work around dynamic function restrictions in AssemblyScript.
-            callWrapper: async (context: pointer<Context>,
+            callWrapper: async (context: pointer<ResolverExecutionContext>,
                                 modulePtr: pointer<string>,
                                 storagePtr: pointer<string>,
                                 callback0: pointer<() => void>,
                                 callback1: pointer<() => void>) => {
-			    const ec = this.getExecutionContext(context)
-				ec.increaseExecDepth()
+                const ec = this.getExecutionContext(context)
+                ec.increaseExecDepth()
                 const module = this.module.__getString(modulePtr)
                 const storage = stringLowerFirst(this.module.__getString(storagePtr))
                 this.handleApiRequestPromise(ec,
-											 this.apiCall(module, storage), 
-											 callback0, callback1)
+                                             this.apiCall(module, storage),
+                                             callback0, callback1)
             },
 
-            callWithArgNumber: async (context: pointer<Context>,
+            callWithArgNumber: async (context: pointer<ResolverExecutionContext>,
                                       modulePtr: pointer<string>,
                                       storagePtr: pointer<string>,
                                       key: pointer<any>, // FIXME! Number assumed
                                       callback: pointer<() => void>) => {
-			    const ec = this.getExecutionContext(context)
-				ec.increaseExecDepth()
+                const ec = this.getExecutionContext(context)
+                ec.increaseExecDepth()
                 const module = this.module.__getString(modulePtr)
                 const storage = stringLowerFirst(this.module.__getString(storagePtr))
-                this.handleApiRequestPromise(ec, 
-											 this.apiCall(module, storage, key), 
-											 callback)
+                this.handleApiRequestPromise(ec,
+                                             this.apiCall(module, storage, key),
+                                             callback)
             },
 
             // CallWithArgNumbeWrapper is like CallWrapper; it's used for getting around
             // restrictions in AssemblyScript.
-            callWithArgNumberWrapper: async (context: pointer<Context>,
+            callWithArgNumberWrapper: async (context: pointer<ResolverExecutionContext>,
                                              modulePtr: pointer<string>,
                                              storagePtr: pointer<string>,
                                              key: pointer<any>, // FIXME! Number assumed
                                              callback0: pointer<() => void>,
                                              callback1: pointer<() => void>) => {
-			    const ec = this.getExecutionContext(context)
-				ec.increaseExecDepth()
+                const ec = this.getExecutionContext(context)
+                ec.increaseExecDepth()
                 const module = this.module.__getString(modulePtr)
                 const storage = stringLowerFirst(this.module.__getString(storagePtr))
                 this.handleApiRequestPromise(ec,
-											 this.apiCall(module, storage, key), 
-											 callback0, callback1)
+                                             this.apiCall(module, storage, key),
+                                             callback0, callback1)
             },
 
             // CallWithArgNumbeWrapperBatch is batching version of callWithArgNumberWrapper.
             // It runs all the queries then makes the callbacks.
-            callWithArgNumberWrapperBatch: async (context: pointer<Context>,
+            callWithArgNumberWrapperBatch: async (context: pointer<ResolverExecutionContext>,
                                                   modulePtr: pointer<string>,
                                                   storagePtr: pointer<string>,
                                                   keysPtr: pointer<any[]>,
                                                   callback0: pointer<() => void>,
                                                   callback1: pointer<() => void>) => {
-				const ec = this.getExecutionContext(context)
+                const ec = this.getExecutionContext(context)
                 ec.increaseExecDepth()
                 const module = this.module.__getString(modulePtr)
                 const storage = stringLowerFirst(this.module.__getString(storagePtr))
-                const promises:  Array<Promise<Codec>> = []
+                const promises: Array<Promise<Codec>> = []
                 const keys = this.module.__getArray(keysPtr)
 
                 for (let i = 0; i < keys.length; i++) {
-                    promises.push(this.apiCall(module,storage,keys[i]))
+                    promises.push(this.apiCall(module, storage, keys[i]))
                 }
 
                 this.handleApiRequestPromiseArray(ec, promises, callback0, callback1)
@@ -444,24 +365,23 @@ export class WASMInstance<T extends {} = {}> {
     // FIXME! This needs to be smarter and type safe
     protected responseModule(): any {
         return {
-            numberField: (context: pointer<Context>, keyPtr: pointer<string>, value: number) => {
+            numberField: (context: pointer<ResolverExecutionContext>, keyPtr: pointer<string>, value: number) => {
                 this.getExecutionContext(context).numberField(keyPtr, value)
             },
 
-            popObject: (context: pointer<Context>) => {
+            popObject: (context: pointer<ResolverExecutionContext>) => {
                 this.getExecutionContext(context).popObject()
-
             },
 
-            pushObject: (context: pointer<Context>) => {
+            pushObject: (context: pointer<ResolverExecutionContext>) => {
                 this.getExecutionContext(context).pushObject()
             },
 
-            pushString: (context: pointer<Context>, value: pointer<string>) => {
+            pushString: (context: pointer<ResolverExecutionContext>, value: pointer<string>) => {
                 this.getExecutionContext(context).pushString(value)
             },
 
-            stringField: (context: pointer<Context>, keyPtr: pointer<string>, valuePtr: pointer<string>) => {
+            stringField: (context: pointer<ResolverExecutionContext>, keyPtr: pointer<string>, valuePtr: pointer<string>) => {
                 this.getExecutionContext(context).stringField(keyPtr, valuePtr)
             },
         }

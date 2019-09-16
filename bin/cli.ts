@@ -14,7 +14,6 @@ import { WASMInstance } from "../lib/WASMInstance"
 // tslint:disable-next-line
 console.error = () => {}
 
-
 ////////////////
 
 log.level = "verbose"
@@ -32,8 +31,8 @@ registerJoystreamTypes();
     const logger = new LoggerWrapper(log)
     banner(logger)
 
-	// FIXME! This will be loaded via an API request
-	const queryBuffer = fs.readFileSync("../query-api/build/query.wasm")
+    // FIXME! This will be loaded via an API request
+    const queryBuffer = fs.readFileSync("../query-api/build/query.wasm")
 
     // FIXME! Allow CLI-argument config for this
     const api = await ApiPromise.create({
@@ -52,7 +51,7 @@ registerJoystreamTypes();
         },
     })
 
-	const runtime = new WASMInstance(queryBuffer, api, logger)
+    const runtime = new WASMInstance(queryBuffer, api, logger)
 
     await new App(api, logger, runtime).start()
 })().catch((err) => {

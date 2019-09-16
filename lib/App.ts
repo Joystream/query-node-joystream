@@ -26,7 +26,7 @@ export class App {
             new QueryResolver(this.api, this.logger, this.queryRuntime),
             new TypeClassifier(this.typeRegistry),
             this.api.runtimeMetadata.asV3,
-			this.queryRuntime,
+            this.queryRuntime,
         )
         const server = new GraphQLServer(config)
         server.start(() => this.logger.info("server", "Running on localhost:4000"))

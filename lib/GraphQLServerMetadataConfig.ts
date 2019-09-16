@@ -107,8 +107,8 @@ export class GraphQLServerMetadataConfig
         const schema = new SDLSchema()
 
         this.typeClassifier.queryBlockSDL(
-            schema, 
-            this.queryRuntime.resolvers(), 
+            schema,
+            this.queryRuntime.resolvers(),
             this.modules)
 
         this.typeClassifier.moduleBlocksSDL(schema, this.modules)
