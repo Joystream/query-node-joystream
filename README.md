@@ -4,7 +4,7 @@ This is the work-in-progress version of the query node defined by the proposal a
 
 # Concept
 
-Substrate has a web API - Polkadot.js - which can access all declared storage via a full node. It's powerful and easy to use, but it requires all non-SRML data types to be stored as TypeScript (or JavaScript) code that must be manually updated to support runtime migrations.  
+Substrate has a web API framework - [Polkadot.js](https://github.com/polkadot-js/) - which can access all declared storage via a full node. It's powerful and easy to use, but it requires all non-SRML data types to be stored as TypeScript (or JavaScript) code that must be manually updated to support runtime migrations.  
 
 The query node is an on-chain solution to this problem. It allows module developers to register all their data types in a dedicated _query module_, which is consumed by the query node. All chain data can then be queried by developers building integrating applications via an automatically-generated GraphQL schema. The storage for the module can be updated during a runtime upgrade, ensuring that the query node will always be up to date.
 
