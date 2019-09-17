@@ -1,28 +1,60 @@
 #!/usr/bin/env node
-"use strict";
+"use strict"
 
-const chalk = require("chalk");
-const figlet = require("figlet");
-const log = require("npmlog");
-import { App } from "../lib/App";
+import { ApiPromise, WsProvider } from "@polkadot/api"
+import * as figlet from "figlet"
+import { ILogger, LoggerWrapper } from "../lib/Logger"
 
-log.level = "verbose";
+const chalk = require("chalk")
+const log = require("npmlog")
+const fs = require("fs")
+import { App } from "../lib/App"
+import { WASMInstance } from "../lib/WASMInstance"
 
-const DEFAULT_DB_URI = "mongodb://localhost:27017/substrateindexer";
+// tslint:disable-next-line
+console.error = () => {}
 
-function banner() {
-  log.info("cli", chalk.blue(figlet.textSync("joystream", "Speed")));
+////////////////
+
+log.level = "verbose"
+
+function banner(logger: ILogger) {
+    logger.info("cli", chalk.blue(figlet.textSync("joystream", "Speed")))
 }
 
 // Register custom substrate types. This is required by the
 // polkadot API interface.
-import { registerJoystreamTypes } from "@joystream/types/";
+import { registerJoystreamTypes } from "@joystream/types/"
 registerJoystreamTypes();
 
 (async () => {
-  banner();
-  await new App(DEFAULT_DB_URI).start();
+    const logger = new LoggerWrapper(log)
+    banner(logger)
+
+    // FIXME! This will be loaded via an API request
+    const queryBuffer = fs.readFileSync("../query-api/build/query.wasm")
+
+    // FIXME! Allow CLI-argument config for this
+    const api = await ApiPromise.create({
+        provider: new WsProvider("ws://127.0.0.1:9944"),
+        types: {
+            // FIXME! Why aren't these registered?
+            CategoryId: "U64",
+            Category: `{"id": "CategoryId", "title": "Text", "description": "Text", "deleted": "Bool", "archived": "Bool"}`,
+            IPNSIdentity: {},
+            InputValidationLengthConstraint: {},
+            Post: {},
+            PostId: {},
+            ThreadId: "U64",
+            Thread: `{"id": "ThreadId", "title": "Text", "category_id": "CategoryId", "nr_in_category": "U32"}`,
+            Url: {},
+        },
+    })
+
+    const runtime = new WASMInstance(queryBuffer, api, logger)
+
+    await new App(api, logger, runtime).start()
 })().catch((err) => {
-  log.error("cli", err.stack);
-  process.exit(1);
-});
+    log.error("cli", err.stack)
+    process.exit(1)
+})
