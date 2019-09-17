@@ -10,7 +10,7 @@ export type pointer<T= {}> = number
 interface IEnvImport extends Record<string, any> {
     memory: WebAssembly.Memory,
     table: WebAssembly.Table,
-    abort?: (msg: number, file: number, line: number, column: number) => void,
+    bort?: (msg: number, file: number, line: number, column: number) => void,
 }
 
 interface IImports extends Record<string, any> {
@@ -49,6 +49,10 @@ interface IResolverNamespace {
     [index: string]: pointer<IResolverWrapper>
 }
 
+export interface IResolverArgs {
+    [index: string]: any
+}
+
 // FIXME! This should be read from the WASM blob, not mirrored like this
 enum JSONValueKind {
     NULL = 0,
@@ -67,6 +71,7 @@ interface IModuleGlue {
     ResolveQuery(queryPtr: pointer<IResolverWrapper>, ctx: pointer<ResolverExecutionContext>): void
     ResolverType(queryPtr: pointer<IResolverWrapper>): pointer<string>
     ResolverParams(queryPtr: pointer<IResolverWrapper>): pointer<string[]>
+    SetContextParams(ctxPtr: pointer<ResolverExecutionContext>, paramsPtr: pointer<ITypedMap<string, IJSONResponse>>): void
 }
 
 interface IQueryModule extends ASUtil {
@@ -95,11 +100,19 @@ export class WASMInstance<T extends {} = {}> {
         // FIXME! Assert module sanity by checking for required types
     }
 
-    public async exec(name: string): Promise<any> {
+    public async exec(name: string, args: IResolverArgs): Promise<any> {
         const parent = this
         return new Promise<any>( (resolve, reject) => {
             const ctxPointer = this.newContext()
-            this.executionContexts.set(ctxPointer, new ResolverExecutionContext(this, ctxPointer, resolve))
+            const ctxVirtual = new ResolverExecutionContext(
+                this, 
+                ctxPointer, 
+                resolve
+            )
+            const paramsPtr = this.argsToStringJSONMap(ctxVirtual, args)
+            this.module.glue.SetContextParams(ctxPointer, paramsPtr)
+            this.executionContexts.set(ctxPointer, ctxVirtual) 
+
             this.module.glue.ResolveQuery(this.module.resolvers[name], ctxPointer)
         })
     }
@@ -143,8 +156,7 @@ export class WASMInstance<T extends {} = {}> {
     }
 
     protected newContext(): pointer<ResolverExecutionContext> {
-        const jsonPtr = 0 // FIXME! Allocate JSON array for params, and free after
-        return this.module.glue.NewContext(jsonPtr)
+        return this.module.glue.NewContext(0)
     }
 
     protected stringArrayFromPointer(input: Array<pointer<string>>): string[] {
@@ -158,9 +170,11 @@ export class WASMInstance<T extends {} = {}> {
     }
 
     protected envModule(): IEnvImport {
+        const logger = this.logger
         return {
             abort(msg: any, file: any, line: any, column: any) {
-                this.logger.error("abort called at main.ts:" + line + ":" + column)
+                console.log(file, msg, line, column)
+                logger.error("abort called at main.ts:" + line + ":" + column)
             },
             memory: new WebAssembly.Memory({
                 initial: 256,
@@ -180,6 +194,16 @@ export class WASMInstance<T extends {} = {}> {
             return fn(key)
         }
         return this.api.query[module][storage]()
+    }
+
+    protected argsToStringJSONMap(ctx: ResolverExecutionContext, args: IResolverArgs): pointer<IJSONResponse> {
+        const output = this.allocateStringJSONMap(ctx)
+        for (const key of Object.keys(args)) {
+            const strPtr = this.allocateString(ctx, key) 
+            const jsonPtr = this.parseJson(ctx, args[key])
+            this.module.glue.SetTypedMapEntry(output, strPtr, jsonPtr)
+        }
+        return output
     }
 
     protected allocateStringJSONMap(ctx: ResolverExecutionContext): pointer<IJSONResponse> {
@@ -230,7 +254,9 @@ export class WASMInstance<T extends {} = {}> {
                 this.logger.error("Unknown:", typeof input)
         }
 
-        return this.module.glue.NewJson(output.kind, output.value)
+        const ptr =  this.module.glue.NewJson(output.kind, output.value)
+        ctx.storePointer(ptr)
+        return ptr
     }
 
     protected dispatchApiReponse(ctx: ResolverExecutionContext,
@@ -273,7 +299,7 @@ export class WASMInstance<T extends {} = {}> {
         })
     }
 
-    // FIXME! This is currently assuming all may keys are numbers!
+    // FIXME! This is currently assuming all map keys are numbers!
     protected apiModule(): any {
         return {
             call: async (context: pointer<ResolverExecutionContext>,

@@ -295,7 +295,13 @@ export class TypeClassifier {
                           resolver: IResolver) {
         this.assertCodecFromSDL(schema, resolver.returnTypeSDL)
 
+        let args = ""
+
+        if (resolver.filters.length > 0) {
+            args = "(" + resolver.filters.join(", ") + ")"
+        }
+
         // FIXME! Filters
-        q.declaration(name + ": " + resolver.returnTypeSDL)
+        q.declaration(name + args + ": " + resolver.returnTypeSDL)
     }
 }

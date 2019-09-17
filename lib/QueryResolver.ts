@@ -7,7 +7,7 @@ import { stringLowerFirst } from "@polkadot/util"
 import { ILogger } from "../lib/Logger"
 import { ModuleDescriptor, ModuleDescriptorIndex } from "./ModuleDescriptor"
 import { StorageDescriptor } from "./StorageDescriptor"
-import { WASMInstance } from "./WASMInstance"
+import { IResolver, WASMInstance, ResolverIndex } from "./WASMInstance"
 
 // FIXME! Remove and move to a new class
 import { IStructTypes } from "./TypeClassifier"
@@ -96,15 +96,15 @@ export class QueryResolver {
         }
     }
 
-    // FIXME! Should Query be a QueryFactory, so that all memory is released each time?
-    public wasmResolvers(resolvers: ResolverCallbackRecord) {
-        // FIXME! Add the others; remove hardcoding
-        resolvers.forumCategories = this.wasmResolver("forumCategories")
+    public wasmResolvers(resolvers: ResolverCallbackRecord, moduleResolvers: ResolverIndex) {
+        for (const key of Object.keys(moduleResolvers)) {
+            resolvers[key] = this.wasmResolver(key, moduleResolvers[key])
+        }
     }
 
-    protected wasmResolver(name: string): ResolverCallback {
+    protected wasmResolver(name: string, resolver: IResolver): ResolverCallback {
         return async (root: any, args: IResolverCallbackArgs, ctx: any, info: any) => {
-            return this.executor.exec(name)
+            return this.executor.exec(name, args)
         }
     }
 
