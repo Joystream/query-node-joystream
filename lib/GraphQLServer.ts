@@ -1,19 +1,17 @@
 import { BigIntResolver } from "graphql-scalars"
 import { GraphQLServer as BaseGraphQLServer } from "graphql-yoga"
-import { ResolverCallbackRecord } from "./QueryResolver"
+import { IResolverCallbackRecord } from "./QueryResolver"
 
 export interface IGraphQLServerConfigurer {
     SDL: string
-    resolvers: ResolverCallbackRecord
+    resolvers: IResolverCallbackRecord
 }
 
 export class GraphQLServer extends BaseGraphQLServer {
     constructor(config: IGraphQLServerConfigurer) {
         const typeDefs = config.SDL
-        const resolvers = {
-            BigInt: BigIntResolver,
-            Query: config.resolvers,
-        }
+        const resolvers = config.resolvers as any
+        resolvers.BigInt = BigIntResolver
 
         super({ typeDefs, resolvers })
     }

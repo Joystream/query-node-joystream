@@ -21,3 +21,13 @@ export function TrimString(str: string, ch0: string, ch1: string) {
 
     return (start > 0 || end < str.length) ? str.substring(start, end) : str
 }
+
+export function implementsTKeys<T>(obj: any, keys: Array<keyof T>): obj is T {
+    if (!obj || !Array.isArray(keys)) {
+        return false
+    }
+
+    const implementKeys = keys.reduce((impl, key) => impl && key in obj, true)
+
+    return implementKeys
+}
