@@ -46,7 +46,7 @@ registerJoystreamTypes();
             Post: {},
             PostId: {},
             ThreadId: "U64",
-            Thread: `{"id": "ThreadId", "title": "Text", "author_id": "AccountId"}`,
+            Thread: `{"id": "ThreadId", "title": "Text", "category_id": "CategoryId", "nr_in_category": "U32"}`,
             Url: {},
         },
     })

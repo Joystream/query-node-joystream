@@ -17,7 +17,7 @@ interface ITypeClassifier {
 
 interface IQueryResolver {
     moduleResolvers(resolvers: ResolverCallbackRecord, modules: ModuleDescriptorIndex): void
-    wasmResolvers(resolvers: ResolverCallbackRecord): void
+    wasmResolvers(resolvers: ResolverCallbackRecord, runtimeResolvers: ResolverIndex): void
 }
 
 interface IResolverSource {
@@ -119,7 +119,7 @@ export class GraphQLServerMetadataConfig
     public get resolvers(): ResolverCallbackRecord {
         const resolvers: ResolverCallbackRecord = {}
         this.queryResolver.moduleResolvers(resolvers, this.modules)
-        this.queryResolver.wasmResolvers(resolvers)
+        this.queryResolver.wasmResolvers(resolvers, this.queryRuntime.resolvers())
         return resolvers
     }
 }

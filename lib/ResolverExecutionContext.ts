@@ -12,7 +12,9 @@ export class ResolverExecutionContext {
     protected referenceStack: any = [this.response]
     protected pointers = new Array<pointer<any>>()
 
-    constructor(parent: WASMInstance, ptr: pointer<ResolverExecutionContext>, execResolve: PromiseResolver) {
+    constructor(parent: WASMInstance, 
+                ptr: pointer<ResolverExecutionContext>, 
+                execResolve: PromiseResolver) {
         this.parent = parent
         this.contexPtr = ptr
         this.resolveFunc = execResolve
