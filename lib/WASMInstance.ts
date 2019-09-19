@@ -309,7 +309,6 @@ export class WASMInstance<T extends {} = {}> {
             this.dispatchApiReponse(ctx, codec, callback, callbackWrapper)
             ctx.decreaseExecDepth()
         }).catch((err) => {
-            // FIXME! Signal error
             this.logger.error(err)
             ctx.resolveExecution()
         })
@@ -325,7 +324,6 @@ export class WASMInstance<T extends {} = {}> {
             }
             ctx.decreaseExecDepth()
         }).catch((err) => {
-            // FIXME! Signal error
             this.logger.error(err)
             ctx.resolveExecution()
         })
@@ -451,7 +449,7 @@ export class WASMInstance<T extends {} = {}> {
                 this.logger.info(value)
             },
             logs: (value: pointer<string>) => {
-                this.logger.info("console.log", this.module.__getString(value)) // FIXME! Allow console.log (lint)
+                this.logger.info("console.log", this.module.__getString(value)) 
             },
         }
     }
