@@ -4,6 +4,7 @@ import { stringLowerFirst } from "@polkadot/util"
 import { ASUtil, instantiateBuffer } from "assemblyscript/lib/loader"
 import { ILogger } from "./Logger"
 import { ResolverExecutionContext } from "./ResolverExecutionContext"
+import { implementsTKeys } from "./util"
 
 export type pointer<T= {}> = number
 
@@ -41,12 +42,18 @@ export interface IResolver {
     filters: string[]
 }
 
-export type ResolverIndex = Record<string, IResolver>
+export function isIResolver(value: any): value is IResolver {
+    return implementsTKeys<IResolver>(value, ["returnTypeSDL", "filters"])
+}
 
-interface IResolverWrapper {}
+export interface IResolverIndex {
+    [index: string]: IResolver | IResolverIndex
+}
+
+type IResolverWrapper = any
 
 interface IResolverNamespace {
-    [index: string]: pointer<IResolverWrapper>
+    [index: string]: pointer<IResolverWrapper> | IResolverNamespace
 }
 
 export interface IResolverArgs {
@@ -72,6 +79,7 @@ interface IModuleGlue {
     ResolverType(queryPtr: pointer<IResolverWrapper>): pointer<string>
     ResolverParams(queryPtr: pointer<IResolverWrapper>): pointer<string[]>
     SetContextParams(ctxPtr: pointer<ResolverExecutionContext>, paramsPtr: pointer<ITypedMap<string, IJSONResponse>>): void
+    SetContextParent(ctxPtr: pointer<ResolverExecutionContext>, paramsPtr: pointer<ITypedMap<string, IJSONResponse>>): void
 }
 
 interface IQueryModule extends ASUtil {
@@ -100,42 +108,57 @@ export class WASMInstance<T extends {} = {}> {
         // FIXME! Assert module sanity by checking for required types
     }
 
-    public async exec(name: string, args: IResolverArgs): Promise<any> {
+    public async exec(path: string[], args: IResolverArgs, root?: any): Promise<any> {
         const parent = this
         return new Promise<any>( (resolve, reject) => {
             const ctxPointer = this.newContext()
             const ctxVirtual = new ResolverExecutionContext(
-                this, 
-                ctxPointer, 
-                resolve
+                this,
+                ctxPointer,
+                resolve,
             )
             const paramsPtr = this.argsToStringJSONMap(ctxVirtual, args)
             this.module.glue.SetContextParams(ctxPointer, paramsPtr)
-            this.executionContexts.set(ctxPointer, ctxVirtual) 
+            
+            if (typeof root !== "undefined") {
+                const parentPtr = this.argsToStringJSONMap(ctxVirtual, root)
+                this.module.glue.SetContextParent(ctxPointer, parentPtr)
+            }
 
-            this.module.glue.ResolveQuery(this.module.resolvers[name], ctxPointer)
+            this.executionContexts.set(ctxPointer, ctxVirtual)
+
+            this.module.glue.ResolveQuery(this.findResolverFromPath(path), ctxPointer)
         })
     }
 
-    public resolvers(): ResolverIndex {
-        const output: ResolverIndex = {}
+    public resolvers(input?: IResolverNamespace): IResolverIndex {
+        if (typeof input === "undefined") {
+            input = this.module.resolvers
+        }
 
-        for (const key of Object.keys(this.module.resolvers)) {
-            output[key] = {
-                returnTypeSDL: this.module.__getString(
-                    this.module.glue.ResolverType(
-                        this.module.resolvers[key],
+        const output: IResolverIndex = {}
+
+        for (const key of Object.keys(input)) {
+            // Resolvers will be Globals
+            if (input[key] instanceof WebAssembly.Global) {
+                output[key] = {
+                    returnTypeSDL: this.module.__getString(
+                        this.module.glue.ResolverType(
+                            input[key] as pointer<IResolverWrapper>,
                         ),
                     ),
-                filters: this.stringArrayFromPointer(
-                    this.module.__getArray(
-                        this.module.glue.ResolverParams(
-                            this.module.resolvers[key],
+                    filters: this.stringArrayFromPointer(
+                        this.module.__getArray(
+                            this.module.glue.ResolverParams(
+                                input[key] as pointer<IResolverWrapper>,
+                            ),
                         ),
                     ),
-                ),
+                }
+            } else {
+                const ns = this.resolvers(input[key] as IResolverNamespace)
+                output[key] = ns as IResolverIndex
             }
-
         }
 
         return output
@@ -144,6 +167,16 @@ export class WASMInstance<T extends {} = {}> {
     public deleteContext(ptr: pointer<ResolverExecutionContext>) {
         this.executionContexts.delete(ptr)
         this.module.__release(ptr)
+    }
+
+    protected findResolverFromPath(path: string[]): pointer<IResolverWrapper> {
+        let ctx: any = this.module.resolvers
+        while (path.length > 0) {
+            const fragment = path[0]
+            path.shift()
+            ctx = ctx[fragment]
+        }
+        return ctx as pointer<IResolverWrapper>
     }
 
     protected getExecutionContext(ctx: pointer<ResolverExecutionContext>): ResolverExecutionContext {
@@ -170,11 +203,10 @@ export class WASMInstance<T extends {} = {}> {
     }
 
     protected envModule(): IEnvImport {
-        const logger = this.logger
+        const parent = this
         return {
             abort(msg: any, file: any, line: any, column: any) {
-                console.log(file, msg, line, column)
-                logger.error("abort called at main.ts:" + line + ":" + column)
+                parent.logger.error(parent.module.__getString(file) + ":" + line + "/" + column, parent.module.__getString(msg))
             },
             memory: new WebAssembly.Memory({
                 initial: 256,
@@ -199,7 +231,7 @@ export class WASMInstance<T extends {} = {}> {
     protected argsToStringJSONMap(ctx: ResolverExecutionContext, args: IResolverArgs): pointer<IJSONResponse> {
         const output = this.allocateStringJSONMap(ctx)
         for (const key of Object.keys(args)) {
-            const strPtr = this.allocateString(ctx, key) 
+            const strPtr = this.allocateString(ctx, key)
             const jsonPtr = this.parseJson(ctx, args[key])
             this.module.glue.SetTypedMapEntry(output, strPtr, jsonPtr)
         }
@@ -277,7 +309,6 @@ export class WASMInstance<T extends {} = {}> {
             this.dispatchApiReponse(ctx, codec, callback, callbackWrapper)
             ctx.decreaseExecDepth()
         }).catch((err) => {
-            // FIXME! Signal error
             this.logger.error(err)
             ctx.resolveExecution()
         })
@@ -293,7 +324,6 @@ export class WASMInstance<T extends {} = {}> {
             }
             ctx.decreaseExecDepth()
         }).catch((err) => {
-            // FIXME! Signal error
             this.logger.error(err)
             ctx.resolveExecution()
         })
@@ -419,7 +449,7 @@ export class WASMInstance<T extends {} = {}> {
                 this.logger.info(value)
             },
             logs: (value: pointer<string>) => {
-                this.logger.info("console.log", this.module.__getString(value)) // FIXME! Allow console.log (lint)
+                this.logger.info("console.log", this.module.__getString(value)) 
             },
         }
     }

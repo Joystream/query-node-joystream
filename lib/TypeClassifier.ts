@@ -12,7 +12,7 @@ import { SDLSchema } from "./SDLSchema"
 import { SDLTypeDef } from "./SDLTypeDef"
 import { StorageType } from "./StorageDescriptor"
 import { TrimString } from "./util"
-import { IResolver, ResolverIndex } from "./WASMInstance"
+import { IResolver, IResolverIndex, isIResolver } from "./WASMInstance"
 
 type SDLSchemaFragment = string
 
@@ -242,7 +242,7 @@ export class TypeClassifier {
     }
 
     public queryBlockSDL(schema: SDLSchema,
-                         resolvers: ResolverIndex,
+                         resolvers: IResolverIndex,
                          modules: ModuleDescriptorIndex) {
 
         const q = schema.type("Query")
@@ -252,9 +252,7 @@ export class TypeClassifier {
             q.declaration(`${key}(block: BigInt = 0): ${module}`)
         }
 
-        for (const key of Object.keys(resolvers)) {
-            this.resolverSDL(schema, q, key, resolvers[key])
-        }
+        this.resolversSDL(schema, resolvers)
     }
 
     public moduleBlocksSDL(schema: SDLSchema, modules: ModuleDescriptorIndex) {
@@ -286,6 +284,20 @@ export class TypeClassifier {
         const codec = this.assertCodec(sdl)
         if (codec !== null) {
             this.codecToSDL(sdl, this.codecs[sdl], schema)
+        }
+    }
+
+    // FIXME! tap into
+    protected resolversSDL(schema: SDLSchema,
+                           resolvers: IResolverIndex,
+                           parent: string = "Query") {
+        for (const key of Object.keys(resolvers)) {
+            if (isIResolver(resolvers[key])) {
+                const q = schema.type(parent)
+                this.resolverSDL(schema, q, key, resolvers[key] as IResolver)
+            } else {
+                this.resolversSDL(schema, resolvers[key] as IResolverIndex, key)
+            }
         }
     }
 

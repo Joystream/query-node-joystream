@@ -7,7 +7,7 @@ import { stringLowerFirst } from "@polkadot/util"
 import { ILogger } from "../lib/Logger"
 import { ModuleDescriptor, ModuleDescriptorIndex } from "./ModuleDescriptor"
 import { StorageDescriptor } from "./StorageDescriptor"
-import { IResolver, WASMInstance, ResolverIndex } from "./WASMInstance"
+import { IResolver, IResolverIndex, isIResolver, WASMInstance } from "./WASMInstance"
 
 // FIXME! Remove and move to a new class
 import { IStructTypes } from "./TypeClassifier"
@@ -18,7 +18,9 @@ interface IResolverCallbackArgs {
 
 type ResolverCallback = (root: any, args: IResolverCallbackArgs, ctx: any, info: any) => any
 
-export type ResolverCallbackRecord = Record<string, ResolverCallback>
+export interface IResolverCallbackRecord {
+    [index: string]: ResolverCallback | IResolverCallbackRecord
+}
 
 export class QueryResolver {
     protected api: ApiPromiseInterface
@@ -40,9 +42,17 @@ export class QueryResolver {
         return this.serialiseCodec(value)
     }
 
-    public moduleResolvers(resolvers: ResolverCallbackRecord, modules: ModuleDescriptorIndex) {
+    public moduleResolvers(resolvers: IResolverCallbackRecord, modules: ModuleDescriptorIndex) {
+        let queryType: IResolverCallbackRecord = {}
+
+        if (typeof resolvers.Query === "undefined") {
+            resolvers.Query = {}
+        }
+
+        queryType = resolvers.Query as IResolverCallbackRecord
+
         for (const key of Object.keys(modules)) {
-            resolvers[key] = this.moduleResolver(key, modules[key])
+            queryType[key] = this.moduleResolver(key, modules[key])
         }
     }
 
@@ -96,15 +106,30 @@ export class QueryResolver {
         }
     }
 
-    public wasmResolvers(resolvers: ResolverCallbackRecord, moduleResolvers: ResolverIndex) {
+    public wasmResolvers(resolvers: IResolverCallbackRecord,
+                         moduleResolvers: IResolverIndex,
+                         path?: string[]) {
         for (const key of Object.keys(moduleResolvers)) {
-            resolvers[key] = this.wasmResolver(key, moduleResolvers[key])
+            const pth = (typeof path === "undefined") ? [] : path.slice(0)
+            pth.push(key)
+
+            if (isIResolver(moduleResolvers[key])) {
+                resolvers[key] = this.wasmResolver(pth.slice(0), moduleResolvers[key] as IResolver)
+            } else {
+                if (typeof resolvers[key] === "undefined") {
+                    resolvers[key] = {}
+                }
+
+                this.wasmResolvers(resolvers[key] as IResolverCallbackRecord,
+                                   moduleResolvers[key] as IResolverIndex,
+                                   pth)
+            }
         }
     }
 
-    protected wasmResolver(name: string, resolver: IResolver): ResolverCallback {
+    protected wasmResolver(path: string[], resolver: IResolver): ResolverCallback {
         return async (root: any, args: IResolverCallbackArgs, ctx: any, info: any) => {
-            return this.executor.exec(name, args)
+            return this.executor.exec(path.slice(0), args, root)
         }
     }
 

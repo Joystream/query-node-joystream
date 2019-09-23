@@ -4,24 +4,24 @@ import { StorageFunctionMetadata as StorageFunctionMetadataV3 } from "@polkadot/
 import { stringLowerFirst } from "@polkadot/util"
 import { IGraphQLServerConfigurer } from "./GraphQLServer"
 import { ModuleDescriptor, ModuleDescriptorIndex } from "./ModuleDescriptor"
-import { ResolverCallbackRecord } from "./QueryResolver"
+import { IResolverCallbackRecord } from "./QueryResolver"
 import { SDLSchema } from "./SDLSchema"
 import { StorageDescriptor, StorageType } from "./StorageDescriptor"
 import { MustStringCodec } from "./util"
-import { ResolverIndex } from "./WASMInstance"
+import { IResolverIndex } from "./WASMInstance"
 
 interface ITypeClassifier {
-    queryBlockSDL(schema: SDLSchema, resolvers: ResolverIndex, modules: ModuleDescriptorIndex): void
+    queryBlockSDL(schema: SDLSchema, resolvers: IResolverIndex, modules: ModuleDescriptorIndex): void
     moduleBlocksSDL(schema: SDLSchema, modules: ModuleDescriptorIndex): void
 }
 
 interface IQueryResolver {
-    moduleResolvers(resolvers: ResolverCallbackRecord, modules: ModuleDescriptorIndex): void
-    wasmResolvers(resolvers: ResolverCallbackRecord, runtimeResolvers: ResolverIndex): void
+    moduleResolvers(resolvers: IResolverCallbackRecord, modules: ModuleDescriptorIndex): void
+    wasmResolvers(resolvers: IResolverCallbackRecord, runtimeResolvers: IResolverIndex): void
 }
 
 interface IResolverSource {
-    resolvers(): ResolverIndex
+    resolvers(): IResolverIndex
 }
 
 export class GraphQLServerMetadataConfig
@@ -116,8 +116,8 @@ export class GraphQLServerMetadataConfig
         return schema.SDL
     }
 
-    public get resolvers(): ResolverCallbackRecord {
-        const resolvers: ResolverCallbackRecord = {}
+    public get resolvers(): IResolverCallbackRecord {
+        const resolvers: IResolverCallbackRecord = {}
         this.queryResolver.moduleResolvers(resolvers, this.modules)
         this.queryResolver.wasmResolvers(resolvers, this.queryRuntime.resolvers())
         return resolvers
