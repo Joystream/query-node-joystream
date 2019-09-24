@@ -8,8 +8,6 @@ import { ILogger } from "../lib/Logger"
 import { ModuleDescriptor, ModuleDescriptorIndex } from "./ModuleDescriptor"
 import { StorageDescriptor } from "./StorageDescriptor"
 import { IResolver, IResolverIndex, isIResolver, WASMInstance } from "./WASMInstance"
-
-// FIXME! Remove and move to a new class
 import { IStructTypes } from "./TypeClassifier"
 
 interface IResolverCallbackArgs {
