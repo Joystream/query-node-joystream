@@ -1,6 +1,11 @@
-import { AccountId, Bool, EnumType, Hash, Struct, Text, Tuple, Vector } from "@polkadot/types"
-import { getTypeClass, getTypeDef, TypeDef, TypeDefInfo } from "@polkadot/types/codec"
-import { TypeRegistry } from "@polkadot/types/codec/typeRegistry"
+import {  Text, Tuple } from "@polkadot/types"
+import { GenericAccountId as AccountId, bool } from "@polkadot/types/primitive"
+import { H256 } from "@polkadot/types/primitive"
+import { Vec } from "@polkadot/types/codec"
+import { Enum, Struct } from "@polkadot/types"
+import { getTypeClass, getTypeDef } from "@polkadot/types/codec"
+import { TypeDef, TypeDefInfo } from "@polkadot/types/codec/create/types"
+import { TypeRegistry } from "@polkadot/types/codec/create/registry"
 import { default as Null } from "@polkadot/types/primitive/Null"
 import { default as U128 } from "@polkadot/types/primitive/U128"
 import { default as U32 } from "@polkadot/types/primitive/U32"
@@ -39,16 +44,16 @@ class ICodecMapping {
 
 const CodecMapping: ICodecMapping[] = [
     { codec: AccountId, SDL: "String" },
-    { codec: Bool, SDL: "Boolean" },
+    { codec: bool, SDL: "Boolean" },
     { codec: Date, SDL: "Int" },
     { callback: (classifier: TypeClassifier, schema: SDLSchema, type: string, codec: Codec): SDLSchemaFragment => {
         // TODO! Create type which has optional values for each of the fields
         // Update: or a union? How to handle __typename?
-        return classifier.decodeEnum(type, codec as EnumType<any>, schema)
+        return classifier.decodeEnum(type, codec as Enum, schema)
       },
-      codec: EnumType,
+      codec: Enum,
     },
-    { codec: Hash, SDL: "String" },
+    { codec: H256, SDL: "String" },
     { codec: Null, SDL: "Null", customScalar: true },
     { callback: (classifier: TypeClassifier, schema: SDLSchema, type: string, codec: Codec): SDLSchemaFragment => {
             classifier.decodeStruct(type, codec as Struct, schema)
@@ -67,10 +72,10 @@ const CodecMapping: ICodecMapping[] = [
     { codec: U128, SDL: "BigInt", customScalar: true },
     { codec: Uint8Array, SDL: "[Int]" },
     { callback: (classifier: TypeClassifier, schema: SDLSchema, type: string, codec: Codec): SDLSchemaFragment => {
-            const raw = codec as Vector<any>
+            const raw = codec as Vec<any>
             return "[" + classifier.stringTypeToSDL(schema, raw.Type) + "]"
         },
-      codec: Vector,
+      codec: Vec,
     },
 ]
 
@@ -105,7 +110,7 @@ export class TypeClassifier {
         return type
     }
 
-    public decodeEnum<T extends EnumType<any>>(type: string, codec: T, schema: SDLSchema): string {
+    public decodeEnum<T extends Enum>(type: string, codec: T, schema: SDLSchema): string {
         const name = this.enumName(type)
 
         if (schema.hasType(name)) {
@@ -207,7 +212,7 @@ export class TypeClassifier {
                 const tuple = new constructor()
                 return this.decodeTuple(tuple as Tuple, schema)
 
-            case TypeDefInfo.Vector:
+            case TypeDefInfo.Vec:
                 let sub = typeDef.sub
 
                 if (typeof sub === "undefined") {

@@ -1,4 +1,4 @@
-import { EnumType } from "@polkadot/types"
+import { Enum} from "@polkadot/types"
 import { Codec } from "@polkadot/types/types"
 import { TypeEnum } from "./CodecClassifierEnum"
 import { SDLSchema } from "./SDLSchema"
@@ -24,7 +24,7 @@ class ICodecMapping {
 // FIXME! Fill this out
 const CodecMapping: ICodecMapping[] = [
     {
-        codec: EnumType,
+        codec: Enum,
         typeClass: TypeEnum,
     },
 ]

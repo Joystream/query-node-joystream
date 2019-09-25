@@ -1,6 +1,6 @@
-import { ApiPromiseInterface } from "@polkadot/api/promise/types"
+import { ApiPromise } from "@polkadot/api"
 import { getTypeRegistry } from "@polkadot/types"
-import { TypeRegistry } from "@polkadot/types/codec/typeRegistry"
+import { TypeRegistry } from "@polkadot/types/codec/create/registry"
 import { ILogger } from "../lib/Logger"
 import { GraphQLServer } from "./GraphQLServer"
 import { GraphQLServerMetadataConfig } from "./GraphQLServerMetadataConfig"
@@ -9,12 +9,12 @@ import { TypeClassifier } from "./TypeClassifier"
 import { WASMInstance } from "./WASMInstance"
 
 export class App {
-    protected api: ApiPromiseInterface
+    protected api: ApiPromise
     protected logger: ILogger
     protected typeRegistry: TypeRegistry
     protected queryRuntime: WASMInstance
 
-    constructor(api: ApiPromiseInterface, logger: ILogger, runtime: WASMInstance) {
+    constructor(api: ApiPromise, logger: ILogger, runtime: WASMInstance) {
         this.api = api
         this.logger = logger
         this.typeRegistry = getTypeRegistry()
@@ -25,7 +25,7 @@ export class App {
         const config = new GraphQLServerMetadataConfig(
             new QueryResolver(this.api, this.logger, this.queryRuntime),
             new TypeClassifier(this.typeRegistry),
-            this.api.runtimeMetadata.asV3,
+            this.api.runtimeMetadata.asV7,
             this.queryRuntime,
         )
         const server = new GraphQLServer(config)

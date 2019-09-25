@@ -1,6 +1,7 @@
+import { Codec } from "@polkadot/types/types"
 import { MetadataInterface } from "@polkadot/types/Metadata/types"
-import { default as MetadataV3,  MetadataModuleV3 } from "@polkadot/types/Metadata/v3"
-import { default as MetadataV4,  MetadataModuleV4 } from "@polkadot/types/Metadata/v4"
+import { default as MetadataV3,  ModuleMetadataV3 } from "@polkadot/types/Metadata/v3"
+import { default as MetadataV4,  ModuleMetadataV4 } from "@polkadot/types/Metadata/v4"
 import { StorageFunctionMetadata as StorageFunctionMetadataV3 } from "@polkadot/types/Metadata/v3/Storage"
 import { StorageFunctionMetadata as StorageFunctionMetadataV4 } from "@polkadot/types/Metadata/v4/Storage"
 import { stringLowerFirst } from "@polkadot/util"
@@ -27,7 +28,7 @@ interface IResolverSource {
 }
 
 export class GraphQLServerMetadataConfig
-    <TMetadataVersion extends MetadataInterface = MetadataV3>
+    <V extends Codec = MetadataV4>
     implements IGraphQLServerConfigurer {
 
     protected typeClassifier: ITypeClassifier
@@ -38,7 +39,7 @@ export class GraphQLServerMetadataConfig
 
     constructor(queryResolver: IQueryResolver,
                 typeClassifier: ITypeClassifier,
-                metadata: TMetadataVersion,
+                metadata: MetadataInterface<V>,
                 queryRuntime: IResolverSource) {
 
         this.queryResolver = queryResolver
@@ -50,18 +51,18 @@ export class GraphQLServerMetadataConfig
         } else if (metadata instanceof MetadataV4) {
             this.modules = this.parseModulesV4(metadata)
         } else {
-            // TODO: Support V4
-            throw new Error("Only V3 supported")
+            // TODO: Support V7
+            throw new Error("Only V3 and V4 supported")
         }
     }
 
     private parseModulesV3(input: MetadataV3): ModuleDescriptorIndex {
         const output = {}
-        input.modules.forEach((module: MetadataModuleV3) => this.parseModuleV3(module, output))
+        input.modules.forEach((module: ModuleMetadataV3) => this.parseModuleV3(module, output))
         return output
     }
 
-    private parseModuleV3(input: MetadataModuleV3, output: ModuleDescriptorIndex) {
+    private parseModuleV3(input: ModuleMetadataV3, output: ModuleDescriptorIndex) {
         const desc = new ModuleDescriptor()
 
         if (input.storage.isNone) {
@@ -106,11 +107,11 @@ export class GraphQLServerMetadataConfig
 
     private parseModulesV4(input: MetadataV4): ModuleDescriptorIndex {
         const output = {}
-        input.modules.forEach((module: MetadataModuleV4) => this.parseModuleV4(module, output))
+        input.modules.forEach((module: ModuleMetadataV4) => this.parseModuleV4(module, output))
         return output
     }
 
-    private parseModuleV4(input: MetadataModuleV4, output: ModuleDescriptorIndex) {
+    private parseModuleV4(input: ModuleMetadataV4, output: ModuleDescriptorIndex) {
         const desc = new ModuleDescriptor()
 
         if (input.storage.isNone) {

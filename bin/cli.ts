@@ -22,11 +22,6 @@ function banner(logger: ILogger) {
     logger.info("cli", chalk.blue(figlet.textSync("joystream", "Speed")))
 }
 
-// Register custom substrate types. This is required by the
-// polkadot API interface.
-import { registerJoystreamTypes } from "@joystream/types/"
-registerJoystreamTypes();
-
 (async () => {
     const logger = new LoggerWrapper(log)
     banner(logger)

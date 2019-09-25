@@ -1,6 +1,9 @@
-import { ApiPromiseInterface } from "@polkadot/api/promise/types"
-import { EnumType, Hash, Header, Struct } from "@polkadot/types"
-import { Tuple, Vector } from "@polkadot/types"
+import { ApiPromise } from "@polkadot/api"
+import { Enum, Struct } from "@polkadot/types"
+import { Hash, Header } from "@polkadot/types/interfaces/runtime"
+import { Tuple } from "@polkadot/types"
+import { H256 } from "@polkadot/types/primitive"
+import { Vec } from "@polkadot/types/codec"
 import { default as U32 } from "@polkadot/types/primitive/U32"
 import { Codec } from "@polkadot/types/types"
 import { stringLowerFirst } from "@polkadot/util"
@@ -21,11 +24,11 @@ export interface IResolverCallbackRecord {
 }
 
 export class QueryResolver {
-    protected api: ApiPromiseInterface
+    protected api: ApiPromise
     protected logger: ILogger
     protected executor: WASMInstance // FIXME! Map interace instead
 
-    constructor(api: ApiPromiseInterface, logger: ILogger, queryRuntime: WASMInstance) {
+    constructor(api: ApiPromise, logger: ILogger, queryRuntime: WASMInstance) {
         this.api = api
         this.logger = logger
         this.executor = queryRuntime
@@ -65,7 +68,7 @@ export class QueryResolver {
             const selections = info.fieldNodes[0].selectionSet.selections as any[]
             const promises: Array<Promise<Codec>> = []
             const fieldNames: string[] = []
-            let blockHash: Codec = new Hash()
+            let blockHash: Codec = new H256()
 
             if (args.block !== 0) {
                 let block = args.block
@@ -132,7 +135,7 @@ export class QueryResolver {
     }
 
     protected serialiseCodec<T extends Codec>(codec: T): any {
-        if (codec instanceof Vector) {
+        if (codec instanceof Vec) {
             return this.serialiseVector(codec)
         }
 
@@ -144,7 +147,7 @@ export class QueryResolver {
             return this.serialiseTuple(codec)
         }
 
-        if (codec instanceof EnumType) {
+        if (codec instanceof Enum) {
             return this.serialiseEnum(codec)
         }
 
@@ -160,14 +163,14 @@ export class QueryResolver {
         return codec
     }
 
-    protected serialiseEnum<T extends EnumType<any>>(e: T): any {
+    protected serialiseEnum<T extends Enum>(e: T): any {
         const output: any = {}
         output[e.type] = this.serialiseCodec(e.value)
         output._enumType = e.type
         return output
     }
 
-    protected serialiseVector<T extends Vector<any>>(v: T): any {
+    protected serialiseVector<T extends Vec<any>>(v: T): any {
         const output = []
         const entries = v.toArray()
 
