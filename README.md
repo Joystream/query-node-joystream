@@ -68,4 +68,11 @@ $ yarn run dev
 $ yarn run lint
 ```
 
+## Regenerating config interfaces
 
+This could be necessary if the structure of the config JSON files changes.
+
+```bash
+$ yarn run regenerate-config
+
+```

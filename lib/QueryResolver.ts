@@ -53,7 +53,8 @@ export class QueryResolver {
         queryType = resolvers.Query as IResolverCallbackRecord
 
         for (const key of Object.keys(modules)) {
-            queryType[key] = this.moduleResolver(key, modules[key])
+			const canonicalName = stringLowerFirst(key)
+            queryType[canonicalName] = this.moduleResolver(canonicalName, modules[key])
         }
     }
 

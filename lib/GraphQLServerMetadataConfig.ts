@@ -1,9 +1,10 @@
 import { Codec } from "@polkadot/types/types"
+import { Metadata } from "@polkadot/types"
 import { MetadataInterface } from "@polkadot/types/Metadata/types"
 import { default as MetadataV3,  ModuleMetadataV3 } from "@polkadot/types/Metadata/v3"
-import { default as MetadataV4,  ModuleMetadataV4 } from "@polkadot/types/Metadata/v4"
+import { default as MetadataV7,  ModuleMetadataV7 } from "@polkadot/types/Metadata/v7"
 import { StorageFunctionMetadata as StorageFunctionMetadataV3 } from "@polkadot/types/Metadata/v3/Storage"
-import { StorageFunctionMetadata as StorageFunctionMetadataV4 } from "@polkadot/types/Metadata/v4/Storage"
+import { StorageMetadata as StorageMetadataV7, StorageEntryMetadata as StorageEntryMetadataV7 } from "@polkadot/types/Metadata/v7/Storage"
 import { stringLowerFirst } from "@polkadot/util"
 import { IGraphQLServerConfigurer } from "./GraphQLServer"
 import { ModuleDescriptor, ModuleDescriptorIndex } from "./ModuleDescriptor"
@@ -12,6 +13,7 @@ import { SDLSchema } from "./SDLSchema"
 import { StorageDescriptor, StorageType } from "./StorageDescriptor"
 import { MustStringCodec } from "./util"
 import { IResolverIndex } from "./WASMInstance"
+import { config as AppConfig } from 'node-config-ts'
 
 interface ITypeClassifier {
     queryBlockSDL(schema: SDLSchema, resolvers: IResolverIndex, modules: ModuleDescriptorIndex): void
@@ -28,31 +30,34 @@ interface IResolverSource {
 }
 
 export class GraphQLServerMetadataConfig
-    <V extends Codec = MetadataV4>
     implements IGraphQLServerConfigurer {
 
     protected typeClassifier: ITypeClassifier
     protected modules: ModuleDescriptorIndex
     protected queryResolver: IQueryResolver
     protected queryRuntime: IResolverSource
-    protected moduleBlacklist: string[] = []
+    protected moduleBlacklist: string[] = ["System", "Babe", "Grandpa"]
 
     constructor(queryResolver: IQueryResolver,
                 typeClassifier: ITypeClassifier,
-                metadata: MetadataInterface<V>,
+                metadata: Metadata,
                 queryRuntime: IResolverSource) {
 
         this.queryResolver = queryResolver
         this.typeClassifier = typeClassifier
         this.queryRuntime = queryRuntime
 
-        if (metadata instanceof MetadataV3) {
-            this.modules = this.parseModulesV3(metadata)
-        } else if (metadata instanceof MetadataV4) {
-            this.modules = this.parseModulesV4(metadata)
-        } else {
-            // TODO: Support V7
-            throw new Error("Only V3 and V4 supported")
+        switch(AppConfig.ArchiveNode.metadataVersion) {
+            case 3:
+            this.modules = this.parseModulesV3(metadata.asV3)
+                break
+
+            case 7:
+            this.modules = this.parseModulesV7(metadata.asV7)
+                break
+
+            default:
+                throw new Error("Only V3 and V7 supported") 
         }
     }
 
@@ -105,13 +110,13 @@ export class GraphQLServerMetadataConfig
         return variable
     }
 
-    private parseModulesV4(input: MetadataV4): ModuleDescriptorIndex {
+    private parseModulesV7(input: MetadataV7): ModuleDescriptorIndex {
         const output = {}
-        input.modules.forEach((module: ModuleMetadataV4) => this.parseModuleV4(module, output))
+        input.modules.forEach((module: ModuleMetadataV7) => this.parseModuleV7(module, output))
         return output
     }
 
-    private parseModuleV4(input: ModuleMetadataV4, output: ModuleDescriptorIndex) {
+    private parseModuleV7(input: ModuleMetadataV7, output: ModuleDescriptorIndex) {
         const desc = new ModuleDescriptor()
 
         if (input.storage.isNone) {
@@ -122,27 +127,35 @@ export class GraphQLServerMetadataConfig
             return
         }
 
-        input.storage.unwrap().forEach( (storage: StorageFunctionMetadataV4) => {
-            const variable = this.extractVariableStorageDescriptorV4(storage)
-            desc.storage[storage.name.toString()] = variable
+        const storageMetadata = input.storage.value as StorageMetadataV7
+        storageMetadata.items.forEach( (item: StorageEntryMetadataV7) => {
+            const variable = this.extractVariableStorageDescriptorV7(item)
+            desc.storage[item.name.toString()] = variable
         })
 
-        output[input.name.toString()] = desc
+        output[input.name.toString()] = desc 
     }
 
-    private extractVariableStorageDescriptorV4(storage: StorageFunctionMetadataV4): StorageDescriptor {
+    private extractVariableStorageDescriptorV7(storage: StorageEntryMetadataV7): StorageDescriptor {
         const variable = new StorageDescriptor()
-
+        
         switch (storage.type.type) {
             case StorageType.Plain:
+            case "Type":
                 variable.structure = StorageType.Plain
                 variable.innerType = MustStringCodec(storage.type.asType)
                 break
 
             case StorageType.Map:
+            case "Map":
                 variable.structure = StorageType.Map
                 variable.mapKeyType = MustStringCodec(storage.type.asMap.get("key"))
                 variable.innerType  = MustStringCodec(storage.type.asMap.get("value"))
+                break
+
+            case "DoubleMap":
+                // FIXME! How?
+                variable.structure = StorageType.Map
                 break
 
             default:

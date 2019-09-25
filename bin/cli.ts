@@ -4,6 +4,7 @@
 import { ApiPromise, WsProvider } from "@polkadot/api"
 import * as figlet from "figlet"
 import { ILogger, LoggerWrapper } from "../lib/Logger"
+import { config as AppConfig } from 'node-config-ts'
 
 const chalk = require("chalk")
 const log = require("npmlog")
@@ -31,17 +32,17 @@ function banner(logger: ILogger) {
 
     // FIXME! Allow CLI-argument config for this
     const api = await ApiPromise.create({
-        provider: new WsProvider("ws://127.0.0.1:9944"),
+        provider: new WsProvider(AppConfig.ArchiveNode.address),
         types: {
             // FIXME! Why aren't these registered?
-            CategoryId: "U64",
-            Category: `{"id": "CategoryId", "title": "Text", "description": "Text", "deleted": "Bool", "archived": "Bool"}`,
+            CategoryId: "u64",
+            Category: `{"id": "CategoryId", "title": "Text", "description": "Text", "deleted": "bool", "archived": "bool"}`,
             IPNSIdentity: {},
             InputValidationLengthConstraint: {},
             Post: {},
             PostId: {},
-            ThreadId: "U64",
-            Thread: `{"id": "ThreadId", "title": "Text", "category_id": "CategoryId", "nr_in_category": "U32"}`,
+            ThreadId: "u64",
+            Thread: `{"id": "ThreadId", "title": "Text", "category_id": "CategoryId", "nr_in_category": "u32"}`,
             Url: {},
         },
     })

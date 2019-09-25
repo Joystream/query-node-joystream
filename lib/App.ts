@@ -7,6 +7,7 @@ import { GraphQLServerMetadataConfig } from "./GraphQLServerMetadataConfig"
 import { QueryResolver } from "./QueryResolver"
 import { TypeClassifier } from "./TypeClassifier"
 import { WASMInstance } from "./WASMInstance"
+import { config as AppConfig } from 'node-config-ts'
 
 export class App {
     protected api: ApiPromise
@@ -25,10 +26,12 @@ export class App {
         const config = new GraphQLServerMetadataConfig(
             new QueryResolver(this.api, this.logger, this.queryRuntime),
             new TypeClassifier(this.typeRegistry),
-            this.api.runtimeMetadata.asV7,
+            this.api.runtimeMetadata,
             this.queryRuntime,
         )
         const server = new GraphQLServer(config)
-        server.start(() => this.logger.info("server", "Running on localhost:4000"))
+		
+        const http = await server.start({port: AppConfig.Server.port})
+        this.logger.info("server", `Running on port ${AppConfig.Server.port} (${JSON.stringify(http.address())})`)
     }
 }
