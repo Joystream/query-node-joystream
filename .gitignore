@@ -3,3 +3,6 @@ apps
 *.swp
 node_modules
 yarn-error.log
+config/Config.d.ts
+**/target/ 
+**/*.rs.bk

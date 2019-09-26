@@ -3,6 +3,7 @@
 
 import { ApiPromise, WsProvider } from "@polkadot/api"
 import * as figlet from "figlet"
+import { config as AppConfig } from "node-config-ts"
 import { ILogger, LoggerWrapper } from "../lib/Logger"
 
 const chalk = require("chalk")
@@ -22,11 +23,6 @@ function banner(logger: ILogger) {
     logger.info("cli", chalk.blue(figlet.textSync("joystream", "Speed")))
 }
 
-// Register custom substrate types. This is required by the
-// polkadot API interface.
-import { registerJoystreamTypes } from "@joystream/types/"
-registerJoystreamTypes();
-
 (async () => {
     const logger = new LoggerWrapper(log)
     banner(logger)
@@ -36,18 +32,47 @@ registerJoystreamTypes();
 
     // FIXME! Allow CLI-argument config for this
     const api = await ApiPromise.create({
-        provider: new WsProvider("ws://127.0.0.1:9944"),
+        provider: new WsProvider(AppConfig.ArchiveNode.address),
         types: {
             // FIXME! Why aren't these registered?
-            CategoryId: "U64",
-            Category: `{"id": "CategoryId", "title": "Text", "description": "Text", "deleted": "Bool", "archived": "Bool"}`,
+            CategoryId: "u64",
+            Category: `{"id": "CategoryId", "title": "Text", "description": "Text", "deleted": "bool", "archived": "bool"}`,
             IPNSIdentity: {},
-            InputValidationLengthConstraint: {},
+            InputValidationLengthConstraint: "u64",
             Post: {},
-            PostId: {},
-            ThreadId: "U64",
-            Thread: `{"id": "ThreadId", "title": "Text", "category_id": "CategoryId", "nr_in_category": "U32"}`,
+            PostId: "u64",
+            ThreadId: "u64",
+            Thread: `{"id": "ThreadId", "title": "Text", "category_id": "CategoryId", "nr_in_category": "u32"}`,
             Url: {},
+            Actor: {},
+            ContentId: {},
+            ContentMetadata: {},
+            ContentMetadataUpdate: {},
+            DataObject: {},
+            DataObjectStorageRelationship: {},
+            DataObjectStorageRelationshipId: {},
+            DataObjectType: {},
+            DataObjectTypeId: {},
+            TypeId: {},
+            DownloadSession: {},
+            DownloadSessionId: {},
+            ElectionStage: {},
+            MemberId: {},
+            PaidMembershipTerms: {},
+            PaidTermId: {},
+            Profile: {},
+            ProposalStatus: {},
+            Requests: {},
+            Role: {},
+            RoleParameters: {},
+            RuntimeUpgradeProposal: {},
+            SealedVote: {},
+            Seats: {},
+            Stake: {},
+            TallyResult: {},
+            TransferableStake: {},
+            UserInfo: {},
+            VoteKind: {},
         },
     })
 

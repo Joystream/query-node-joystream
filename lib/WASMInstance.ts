@@ -1,4 +1,4 @@
-import { ApiPromiseInterface } from "@polkadot/api/promise/types"
+import { ApiPromise } from "@polkadot/api"
 import { Codec } from "@polkadot/types/types"
 import { stringLowerFirst } from "@polkadot/util"
 import { ASUtil, instantiateBuffer } from "assemblyscript/lib/loader"
@@ -92,12 +92,12 @@ interface IQueryModule extends ASUtil {
 
 export class WASMInstance<T extends {} = {}> {
     public module: IQueryModule
-    protected api: ApiPromiseInterface
+    protected api: ApiPromise
     protected logger: ILogger
     protected importsObject: IImports
     protected executionContexts = new Map<pointer<ResolverExecutionContext>, ResolverExecutionContext>()
 
-    constructor(src: Buffer, api: ApiPromiseInterface, logger: ILogger) {
+    constructor(src: Buffer, api: ApiPromise, logger: ILogger) {
         const typedArray = new Uint8Array(src)
         this.importsObject = this.imports()
         const lib = instantiateBuffer<T>(typedArray, this.importsObject)
@@ -119,7 +119,7 @@ export class WASMInstance<T extends {} = {}> {
             )
             const paramsPtr = this.argsToStringJSONMap(ctxVirtual, args)
             this.module.glue.SetContextParams(ctxPointer, paramsPtr)
-            
+
             if (typeof root !== "undefined") {
                 const parentPtr = this.argsToStringJSONMap(ctxVirtual, root)
                 this.module.glue.SetContextParent(ctxPointer, parentPtr)
@@ -449,7 +449,7 @@ export class WASMInstance<T extends {} = {}> {
                 this.logger.info(value)
             },
             logs: (value: pointer<string>) => {
-                this.logger.info("console.log", this.module.__getString(value)) 
+                this.logger.info("console.log", this.module.__getString(value))
             },
         }
     }

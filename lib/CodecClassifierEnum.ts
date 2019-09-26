@@ -1,4 +1,4 @@
-import { EnumType } from "@polkadot/types"
+import { Enum } from "@polkadot/types"
 import { Codec } from "@polkadot/types/types"
 import { SDLSchema } from "./SDLSchema"
 import { ICodecSDLClassifier, ICodecSerialiser, SDLSchemaFragment, Type } from "./Type"
@@ -11,7 +11,7 @@ interface IEnumTypes<T = any> {
     _def: IStringIndex<T>
 }
 
-export class TypeEnum<T extends EnumType<any> = EnumType<any>> extends Type<T> {
+export class TypeEnum<T extends Enum = Enum> extends Type<T> {
     public typeName(type: string): string {
         return type
     }
@@ -19,7 +19,7 @@ export class TypeEnum<T extends EnumType<any> = EnumType<any>> extends Type<T> {
     public codecToSDL(
         root: ICodecSDLClassifier<Codec>,
         type: string,
-        codec: EnumType<any>,
+        codec: Enum,
         schema: SDLSchema,
     ): SDLSchemaFragment {
         const name = this.typeName(type)

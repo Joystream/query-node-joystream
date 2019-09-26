@@ -1,0 +1,9 @@
+{
+    "Server": {
+        "port": 4000
+    },
+    "ArchiveNode": {
+        "address": "ws://127.0.0.1:9944",
+        "metadataVersion": 7
+    }
+}

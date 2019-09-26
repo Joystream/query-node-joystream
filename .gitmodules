@@ -1,0 +1,3 @@
+[submodule "e2e/joystream-node/substrate-runtime-joystream"]
+	path = e2e/joystream-node/substrate-runtime-joystream
+	url = git@github.com:yourheropaul/substrate-runtime-joystream.git

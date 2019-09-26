@@ -38,34 +38,47 @@ $ brew install libtool automake autoconf
 
 ### An archive node
 
-The query node connects to a full node, which should have its WebSockets RPC API on port `9944` (port currently hardcoded) and be in archive mode.
-
-For example:
-
-```
-./joystream-node --ws-port 9944 --pruning archive
-```
-
 ## Setting up
 
+There is a first-time installer that needs to be run once:
+
 ```bash
-$ yarn install
+$ make install
 ```
 
-## Run
+This will configure the dev environment and build the applications. It will take quite a long time!
+
+## Start the joystream testnet
+
+The query node needs to connect to a full node. A testnet node is provided in this
+repo, and can be started with:
+
 ```bash
-$ yarn run start
+$ make testnet
 ```
+
+## Run the query node
+
+```bash
+$ make query-node
+```
+
+This will connect to the a full node on the localhost by default.
 
 ## Development run
 
 ```bash
-$ yarn run dev
+$ make query-node-dev
 ```
 
-## Run linter:
+This will connect to the a full node on the localhost by default. `make testnet` provides a
+suitable archive node.
+
+## Regenerating config interfaces
+
+This could be necessary if the structure of the config JSON files changes.
+
 ```bash
-$ yarn run lint
+$ make regenerate-config
+
 ```
-
-

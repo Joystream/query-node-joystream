@@ -15,9 +15,9 @@ export class ResolverExecutionContext {
     constructor(parent: WASMInstance,
                 ptr: pointer<ResolverExecutionContext>,
                 execResolve: PromiseResolver) {
-				this.parent = parent
-				this.contexPtr = ptr
-				this.resolveFunc = execResolve
+                this.parent = parent
+                this.contexPtr = ptr
+                this.resolveFunc = execResolve
     }
 
     public toPointer(): pointer<ResolverExecutionContext> {
@@ -70,19 +70,19 @@ export class ResolverExecutionContext {
     }
 
     public increaseExecDepth(depth: number = 1) {
-		this.depth += depth
-	}
+        this.depth += depth
+    }
 
-	public decreaseExecDepth(depth: number = 1) {
-		// This is to fix a weird AssemblyScript issue: we must wait 0
-		// milliseconds (ie, the promise resolution overhead) or the
-		// memory freed by the RessolverExecutionContext will be released
-		// too early, and the WASM function may crash.
-		new Promise( resolve => setTimeout(resolve, 0) ).then(() => {
-			this.depth -= depth
-			if (this.depth === 0) {
-				this.resolveExecution()
-			}
-		})
-	}
+    public decreaseExecDepth(depth: number = 1) {
+        // This is to fix a weird AssemblyScript issue: we must wait 0
+        // milliseconds (ie, the promise resolution overhead) or the
+        // memory freed by the RessolverExecutionContext will be released
+        // too early, and the WASM function may crash.
+        new Promise( (resolve) => setTimeout(resolve, 0) ).then(() => {
+            this.depth -= depth
+            if (this.depth === 0) {
+                this.resolveExecution()
+            }
+        })
+    }
 }
