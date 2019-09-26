@@ -36,7 +36,7 @@ export class GraphQLServerMetadataConfig
     protected modules: ModuleDescriptorIndex
     protected queryResolver: IQueryResolver
     protected queryRuntime: IResolverSource
-    protected moduleBlacklist: string[] = ["System", "Babe", "Grandpa"]
+    protected moduleWhitelist: string[] = ["Timestamp", "Forum"]
 
     constructor(queryResolver: IQueryResolver,
                 typeClassifier: ITypeClassifier,
@@ -74,7 +74,7 @@ export class GraphQLServerMetadataConfig
             return
         }
 
-        if (this.moduleBlacklist.indexOf(MustStringCodec(input.name)) !== -1) {
+        if (this.moduleWhitelist.indexOf(MustStringCodec(input.name)) === -1) {
             return
         }
 
@@ -123,7 +123,7 @@ export class GraphQLServerMetadataConfig
             return
         }
 
-        if (this.moduleBlacklist.indexOf(MustStringCodec(input.name)) !== -1) {
+        if (this.moduleWhitelist.indexOf(MustStringCodec(input.name)) === -1) {
             return
         }
 

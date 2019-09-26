@@ -225,11 +225,11 @@ export class TypeClassifier {
 
                 sub = sub as TypeDef
                 return "[" + this.typeDefToSDL(sub, schema, sub.type) + "]"
-			    return "String"
+                return "String"
 
-		   case TypeDefInfo.VecFixed:
-			    // FIXME! Is this always a string? It is for AccountId
-			    return "String"
+           case TypeDefInfo.VecFixed:
+                // FIXME! Is this always a string? It is for AccountId
+                return "String"
         }
 
         throw new Error(`Unknown TypeDef type: ${type}`)
