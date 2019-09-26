@@ -1,17 +1,17 @@
 import { ApiPromise } from "@polkadot/api"
 import { Enum, Struct } from "@polkadot/types"
-import { Hash, Header } from "@polkadot/types/interfaces/runtime"
 import { Tuple } from "@polkadot/types"
-import { H256 } from "@polkadot/types/primitive"
 import { Vec } from "@polkadot/types/codec"
+import { Hash, Header } from "@polkadot/types/interfaces/runtime"
+import { H256 } from "@polkadot/types/primitive"
 import { default as U32 } from "@polkadot/types/primitive/U32"
 import { Codec } from "@polkadot/types/types"
 import { stringLowerFirst } from "@polkadot/util"
 import { ILogger } from "../lib/Logger"
 import { ModuleDescriptor, ModuleDescriptorIndex } from "./ModuleDescriptor"
 import { StorageDescriptor } from "./StorageDescriptor"
-import { IResolver, IResolverIndex, isIResolver, WASMInstance } from "./WASMInstance"
 import { IStructTypes } from "./TypeClassifier"
+import { IResolver, IResolverIndex, isIResolver, WASMInstance } from "./WASMInstance"
 
 interface IResolverCallbackArgs {
     block: number
@@ -53,8 +53,8 @@ export class QueryResolver {
         queryType = resolvers.Query as IResolverCallbackRecord
 
         for (const key of Object.keys(modules)) {
-			const canonicalName = stringLowerFirst(key)
-            queryType[canonicalName] = this.moduleResolver(canonicalName, modules[key])
+            const canonicalName = stringLowerFirst(key)
+   queryType[canonicalName] = this.moduleResolver(canonicalName, modules[key])
         }
     }
 

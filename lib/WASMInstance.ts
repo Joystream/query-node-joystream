@@ -119,7 +119,7 @@ export class WASMInstance<T extends {} = {}> {
             )
             const paramsPtr = this.argsToStringJSONMap(ctxVirtual, args)
             this.module.glue.SetContextParams(ctxPointer, paramsPtr)
-            
+
             if (typeof root !== "undefined") {
                 const parentPtr = this.argsToStringJSONMap(ctxVirtual, root)
                 this.module.glue.SetContextParent(ctxPointer, parentPtr)
@@ -449,7 +449,7 @@ export class WASMInstance<T extends {} = {}> {
                 this.logger.info(value)
             },
             logs: (value: pointer<string>) => {
-                this.logger.info("console.log", this.module.__getString(value)) 
+                this.logger.info("console.log", this.module.__getString(value))
             },
         }
     }

@@ -78,7 +78,7 @@ export class ResolverExecutionContext {
         // milliseconds (ie, the promise resolution overhead) or the
         // memory freed by the RessolverExecutionContext will be released
         // too early, and the WASM function may crash.
-        new Promise( resolve => setTimeout(resolve, 0) ).then(() => {
+        new Promise( (resolve) => setTimeout(resolve, 0) ).then(() => {
             this.depth -= depth
             if (this.depth === 0) {
                 this.resolveExecution()

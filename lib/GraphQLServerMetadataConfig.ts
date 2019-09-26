@@ -1,11 +1,12 @@
-import { Codec } from "@polkadot/types/types"
 import { Metadata } from "@polkadot/types"
 import { MetadataInterface } from "@polkadot/types/Metadata/types"
 import { default as MetadataV3,  ModuleMetadataV3 } from "@polkadot/types/Metadata/v3"
-import { default as MetadataV7,  ModuleMetadataV7 } from "@polkadot/types/Metadata/v7"
 import { StorageFunctionMetadata as StorageFunctionMetadataV3 } from "@polkadot/types/Metadata/v3/Storage"
-import { StorageMetadata as StorageMetadataV7, StorageEntryMetadata as StorageEntryMetadataV7 } from "@polkadot/types/Metadata/v7/Storage"
+import { default as MetadataV7,  ModuleMetadataV7 } from "@polkadot/types/Metadata/v7"
+import { StorageEntryMetadata as StorageEntryMetadataV7, StorageMetadata as StorageMetadataV7 } from "@polkadot/types/Metadata/v7/Storage"
+import { Codec } from "@polkadot/types/types"
 import { stringLowerFirst } from "@polkadot/util"
+import { config as AppConfig } from "node-config-ts"
 import { IGraphQLServerConfigurer } from "./GraphQLServer"
 import { ModuleDescriptor, ModuleDescriptorIndex } from "./ModuleDescriptor"
 import { IResolverCallbackRecord } from "./QueryResolver"
@@ -13,7 +14,6 @@ import { SDLSchema } from "./SDLSchema"
 import { StorageDescriptor, StorageType } from "./StorageDescriptor"
 import { MustStringCodec } from "./util"
 import { IResolverIndex } from "./WASMInstance"
-import { config as AppConfig } from 'node-config-ts'
 
 interface ITypeClassifier {
     queryBlockSDL(schema: SDLSchema, resolvers: IResolverIndex, modules: ModuleDescriptorIndex): void
@@ -47,17 +47,17 @@ export class GraphQLServerMetadataConfig
         this.typeClassifier = typeClassifier
         this.queryRuntime = queryRuntime
 
-        switch(AppConfig.ArchiveNode.metadataVersion) {
+        switch (AppConfig.ArchiveNode.metadataVersion) {
             case 3:
             this.modules = this.parseModulesV3(metadata.asV3)
-                break
+            break
 
             case 7:
             this.modules = this.parseModulesV7(metadata.asV7)
-                break
+            break
 
             default:
-                throw new Error("Only V3 and V7 supported") 
+                throw new Error("Only V3 and V7 supported")
         }
     }
 
@@ -133,12 +133,12 @@ export class GraphQLServerMetadataConfig
             desc.storage[item.name.toString()] = variable
         })
 
-        output[input.name.toString()] = desc 
+        output[input.name.toString()] = desc
     }
 
     private extractVariableStorageDescriptorV7(storage: StorageEntryMetadataV7): StorageDescriptor {
         const variable = new StorageDescriptor()
-        
+
         switch (storage.type.type) {
             case StorageType.Plain:
             case "Type":

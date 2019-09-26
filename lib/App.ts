@@ -1,13 +1,13 @@
 import { ApiPromise } from "@polkadot/api"
 import { getTypeRegistry } from "@polkadot/types"
 import { TypeRegistry } from "@polkadot/types/codec/create/registry"
+import { config as AppConfig } from "node-config-ts"
 import { ILogger } from "../lib/Logger"
 import { GraphQLServer } from "./GraphQLServer"
 import { GraphQLServerMetadataConfig } from "./GraphQLServerMetadataConfig"
 import { QueryResolver } from "./QueryResolver"
 import { TypeClassifier } from "./TypeClassifier"
 import { WASMInstance } from "./WASMInstance"
-import { config as AppConfig } from 'node-config-ts'
 
 export class App {
     protected api: ApiPromise
@@ -30,7 +30,7 @@ export class App {
             this.queryRuntime,
         )
         const server = new GraphQLServer(config)
-		
+
         const http = await server.start({port: AppConfig.Server.port})
         this.logger.info("server", `Running on port ${AppConfig.Server.port} (${JSON.stringify(http.address())})`)
     }
