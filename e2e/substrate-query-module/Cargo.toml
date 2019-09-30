@@ -1,0 +1,58 @@
+[package]
+name = "substrate-query-module"
+version = "0.1.0"
+authors = ["Paul M Fox <paul@jsgenesis.com>"]
+edition = "2018"
+
+[features]
+default = ['std']
+std = [
+    'serde',
+    'codec/std',
+    'support/std',
+    'system/std',
+    'timestamp/std',
+]
+
+[dependencies.serde]
+version = "1.0"
+optional = true
+
+[dependencies.codec]
+default-features = false
+features = ['derive']
+package = 'parity-scale-codec'
+version = '1.0.0'
+
+[dependencies.support]
+default_features = false
+git = 'https://github.com/paritytech/substrate.git'
+package = 'srml-support'
+rev = 'a2a0eb5398d6223e531455b4c155ef053a4a3a2b'
+
+[dependencies.system]
+default_features = false
+git = 'https://github.com/paritytech/substrate.git'
+package = 'srml-system'
+rev = 'a2a0eb5398d6223e531455b4c155ef053a4a3a2b'
+
+[dev-dependencies.primitives]
+git = 'https://github.com/paritytech/substrate.git'
+package = 'substrate-primitives'
+rev = 'a2a0eb5398d6223e531455b4c155ef053a4a3a2b'
+
+[dev-dependencies.sr-primitives]
+git = 'https://github.com/paritytech/substrate.git'
+package = 'sr-primitives'
+rev = 'a2a0eb5398d6223e531455b4c155ef053a4a3a2b'
+
+[dev-dependencies.runtime-io]
+git = 'https://github.com/paritytech/substrate.git'
+package = 'sr-io'
+rev = 'a2a0eb5398d6223e531455b4c155ef053a4a3a2b'
+
+[dependencies.timestamp]
+default_features = false
+git = 'https://github.com/paritytech/substrate.git'
+package = 'srml-timestamp'
+rev = 'a2a0eb5398d6223e531455b4c155ef053a4a3a2b'

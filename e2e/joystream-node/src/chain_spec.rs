@@ -216,6 +216,7 @@ fn testnet_genesis(initial_authorities: Vec<(AccountId, AccountId, GrandpaId, Ba
                 members: Some(MembersConfig {
                         default_paid_membership_fee: 100u128,
 			first_member_id: 1,
+                        members: vec![],
                 }),
                 authority_discovery: Some(AuthorityDiscoveryConfig {
 			keys: vec![],
