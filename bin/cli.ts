@@ -11,6 +11,7 @@ const log = require("npmlog")
 const fs = require("fs")
 import { App } from "../lib/App"
 import { WASMInstance } from "../lib/WASMInstance"
+import { RuntimeFinder } from "../lib/RuntimeFinder"
 
 // tslint:disable-next-line
 console.error = () => {}
@@ -30,13 +31,15 @@ function banner(logger: ILogger) {
     // FIXME! This will be loaded via an API request
     const queryBuffer = fs.readFileSync("../query-api/build/query.wasm")
 
-    // FIXME! Allow CLI-argument config for this
+    const finder = new RuntimeFinder({provider: new WsProvider(AppConfig.ArchiveNode.address)})
+    await finder.isReady
+
     const api = await ApiPromise.create({
         provider: new WsProvider(AppConfig.ArchiveNode.address),
         types: {
             // FIXME! Why aren't these registered?
-            CategoryId: "u64",
             Category: `{"id": "CategoryId", "title": "Text", "description": "Text", "deleted": "bool", "archived": "bool"}`,
+            CategoryId: "u64",
             IPNSIdentity: {},
             InputValidationLengthConstraint: "u64",
             Post: {},
