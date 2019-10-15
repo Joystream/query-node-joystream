@@ -54,7 +54,7 @@ export class QueryResolver {
 
         for (const key of Object.keys(modules)) {
             const canonicalName = stringLowerFirst(key)
-   queryType[canonicalName] = this.moduleResolver(canonicalName, modules[key])
+            queryType[canonicalName] = this.moduleResolver(canonicalName, modules[key])
         }
     }
 
