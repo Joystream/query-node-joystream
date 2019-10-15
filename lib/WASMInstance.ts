@@ -1,5 +1,6 @@
 import { ApiPromise } from "@polkadot/api"
 import { Codec } from "@polkadot/types/types"
+import { RegistryTypes } from "@polkadot/types/types"
 import { stringLowerFirst } from "@polkadot/util"
 import { ASUtil, instantiateBuffer } from "assemblyscript/lib/loader"
 import { ILogger } from "./Logger"
@@ -50,6 +51,10 @@ export interface IResolverIndex {
     [index: string]: IResolver | IResolverIndex
 }
 
+export interface ITypeIndex {
+    [index: string]: pointer<string>
+}
+
 type IResolverWrapper = any
 
 interface IResolverNamespace {
@@ -72,14 +77,19 @@ enum JSONValueKind {
 
 interface IModuleGlue {
     NewStringJsonMap: () => pointer<IJSONResponse>
-    SetTypedMapEntry(map: pointer<ITypedMap<string, IJSONResponse>>, key: pointer<string>, value: pointer<IJSONResponse>): void
+    SetTypedMapEntry(map: pointer<ITypedMap<string, IJSONResponse>>,
+                     key: pointer<string>,
+                     value: pointer<IJSONResponse>): void
     NewJson(kind: number, value: pointer<any>): pointer<IJSONResponse>
     NewContext(params: pointer<ITypedMap<string, IJSONResponse>>): pointer<ResolverExecutionContext>
-    ResolveQuery(queryPtr: pointer<IResolverWrapper>, ctx: pointer<ResolverExecutionContext>): void
+    ResolveQuery(queryPtr: pointer<IResolverWrapper>,
+                 ctx: pointer<ResolverExecutionContext>): void
     ResolverType(queryPtr: pointer<IResolverWrapper>): pointer<string>
     ResolverParams(queryPtr: pointer<IResolverWrapper>): pointer<string[]>
-    SetContextParams(ctxPtr: pointer<ResolverExecutionContext>, paramsPtr: pointer<ITypedMap<string, IJSONResponse>>): void
-    SetContextParent(ctxPtr: pointer<ResolverExecutionContext>, paramsPtr: pointer<ITypedMap<string, IJSONResponse>>): void
+    SetContextParams(ctxPtr: pointer<ResolverExecutionContext>,
+                     paramsPtr: pointer<ITypedMap<string, IJSONResponse>>): void
+    SetContextParent(ctxPtr: pointer<ResolverExecutionContext>,
+                     paramsPtr: pointer<ITypedMap<string, IJSONResponse>>): void
 }
 
 interface IQueryModule extends ASUtil {
@@ -88,6 +98,7 @@ interface IQueryModule extends ASUtil {
     JSONValueKind: any
     glue: IModuleGlue
     resolvers: IResolverNamespace
+    types: ITypeIndex
 }
 
 export class WASMInstance<T extends {} = {}> {
@@ -97,8 +108,7 @@ export class WASMInstance<T extends {} = {}> {
     protected importsObject: IImports
     protected executionContexts = new Map<pointer<ResolverExecutionContext>, ResolverExecutionContext>()
 
-    constructor(src: Buffer, api: ApiPromise, logger: ILogger) {
-        const typedArray = new Uint8Array(src)
+    constructor(typedArray: Uint8Array, api: ApiPromise, logger: ILogger) {
         this.importsObject = this.imports()
         const lib = instantiateBuffer<T>(typedArray, this.importsObject)
         this.module = lib as unknown as IQueryModule
@@ -164,6 +174,19 @@ export class WASMInstance<T extends {} = {}> {
         return output
     }
 
+    public types(): RegistryTypes {
+        const output: RegistryTypes = {}
+        for (const key of Object.keys(this.module.types)) {
+            const str = this.module.__getString(this.module.types[key])
+            if (str !== "") {
+                output[key] = str
+            } else {
+                output[key] = {}
+            }
+        }
+        return output
+    }
+
     public deleteContext(ptr: pointer<ResolverExecutionContext>) {
         this.executionContexts.delete(ptr)
         this.module.__release(ptr)
@@ -206,7 +229,8 @@ export class WASMInstance<T extends {} = {}> {
         const parent = this
         return {
             abort(msg: any, file: any, line: any, column: any) {
-                parent.logger.error(parent.module.__getString(file) + ":" + line + "/" + column, parent.module.__getString(msg))
+                parent.logger.error(parent.module.__getString(file) + ":" + line + "/" + column,
+                                    parent.module.__getString(msg))
             },
             memory: new WebAssembly.Memory({
                 initial: 256,
@@ -421,7 +445,9 @@ export class WASMInstance<T extends {} = {}> {
     // FIXME! This needs to be smarter and type safe
     protected responseModule(): any {
         return {
-            numberField: (context: pointer<ResolverExecutionContext>, keyPtr: pointer<string>, value: number) => {
+            numberField: (context: pointer<ResolverExecutionContext>,
+                          keyPtr: pointer<string>,
+                          value: number) => {
                 this.getExecutionContext(context).numberField(keyPtr, value)
             },
 
@@ -437,7 +463,9 @@ export class WASMInstance<T extends {} = {}> {
                 this.getExecutionContext(context).pushString(value)
             },
 
-            stringField: (context: pointer<ResolverExecutionContext>, keyPtr: pointer<string>, valuePtr: pointer<string>) => {
+            stringField: (context: pointer<ResolverExecutionContext>,
+                          keyPtr: pointer<string>,
+                          valuePtr: pointer<string>) => {
                 this.getExecutionContext(context).stringField(keyPtr, valuePtr)
             },
         }

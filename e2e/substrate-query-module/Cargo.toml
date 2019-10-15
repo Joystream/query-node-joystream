@@ -12,6 +12,7 @@ std = [
     'support/std',
     'system/std',
     'timestamp/std',
+    'rstd/std',
 ]
 
 [dependencies.serde]
@@ -55,4 +56,10 @@ rev = 'a2a0eb5398d6223e531455b4c155ef053a4a3a2b'
 default_features = false
 git = 'https://github.com/paritytech/substrate.git'
 package = 'srml-timestamp'
+rev = 'a2a0eb5398d6223e531455b4c155ef053a4a3a2b'
+
+[dependencies.rstd]
+default-features = false
+package = 'sr-std'
+git = "https://github.com/paritytech/substrate.git"
 rev = 'a2a0eb5398d6223e531455b4c155ef053a4a3a2b'

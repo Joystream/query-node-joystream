@@ -1,4 +1,5 @@
 #![cfg_attr(not(feature = "std"), no_std)]
+use rstd::prelude::*;
 
 /// A runtime module template with necessary imports
 
@@ -18,7 +19,7 @@ pub trait Trait: system::Trait {
 
 decl_storage! {
     trait Store for Module<T: Trait> as Query {
-        pub Runtime get(runtime) : u32 = 4096;
+        pub Runtime get(runtime) config(): Vec<u8>;
     }
 }
 

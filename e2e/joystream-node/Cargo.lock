@@ -4165,6 +4165,7 @@ version = "0.1.0"
 dependencies = [
  "parity-scale-codec 1.0.6 (registry+https://github.com/rust-lang/crates.io-index)",
  "serde 1.0.101 (registry+https://github.com/rust-lang/crates.io-index)",
+ "sr-std 2.0.0 (git+https://github.com/paritytech/substrate.git?rev=a2a0eb5398d6223e531455b4c155ef053a4a3a2b)",
  "srml-support 2.0.0 (git+https://github.com/paritytech/substrate.git?rev=a2a0eb5398d6223e531455b4c155ef053a4a3a2b)",
  "srml-system 2.0.0 (git+https://github.com/paritytech/substrate.git?rev=a2a0eb5398d6223e531455b4c155ef053a4a3a2b)",
  "srml-timestamp 2.0.0 (git+https://github.com/paritytech/substrate.git?rev=a2a0eb5398d6223e531455b4c155ef053a4a3a2b)",

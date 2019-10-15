@@ -4,6 +4,7 @@
     },
     "ArchiveNode": {
         "address": "ws://127.0.0.1:9944",
-        "metadataVersion": 7
+        "metadataVersion": 7,
+        "queryModuleName": "query"
     }
 }

@@ -8,6 +8,7 @@ use joystream_node_runtime::{
     ActorsConfig, SystemConfig, BabeConfig, WASM_BINARY,
     forum::InputValidationLengthConstraint,
     SessionKeys,
+    QueryConfig,
 };
 use staking::Forcing;
 use im_online::{sr25519::AuthorityId as ImOnlineId};
@@ -48,6 +49,16 @@ pub fn get_authority_keys_from_seed(seed: &str) -> (AccountId, AccountId, Grandp
 		get_from_seed::<BabeId>(seed),
 		get_from_seed::<ImOnlineId>(seed),
 	)
+}
+
+fn get_wasm_file() -> Vec<u8> {
+    match std::fs::read("../query-api/build/query.wasm") {
+        Ok(bytes) => bytes,
+        Err(_e) => {
+            println!("Failed");
+            vec![]
+        },
+    }
 }
 
 impl Alternative {
@@ -141,6 +152,7 @@ fn testnet_genesis(initial_authorities: Vec<(AccountId, AccountId, GrandpaId, Ba
 	root_key: AccountId, 
 	endowed_accounts: Vec<AccountId>,
 	_enable_println: bool) -> GenesisConfig {
+
 	GenesisConfig {
 		system: Some(SystemConfig {
 			code: WASM_BINARY.to_vec(),
@@ -251,5 +263,8 @@ fn testnet_genesis(initial_authorities: Vec<(AccountId, AccountId, GrandpaId, Ba
 			stakers: initial_authorities.iter().map(|x| (x.0.clone(), x.1.clone(), STASH, StakerStatus::Validator)).collect(),
 			invulnerables: initial_authorities.iter().map(|x| x.1.clone()).collect(),
 		}), 
+                query: Some(QueryConfig{
+                    runtime: get_wasm_file(),
+                }),
 	}
 }
