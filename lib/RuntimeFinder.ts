@@ -44,7 +44,6 @@ function unregisteredTypes(types: string[]): string[] {
     )
 }
 
-// FIXME! Add a promise function so that this is always called first
 export class RuntimeFinder extends ApiPromise {
     public unregisteredTypes: string[] = []
 
@@ -52,15 +51,15 @@ export class RuntimeFinder extends ApiPromise {
         super(options)
     }
 
-    public get runtime(): Promise<Codec> {
-        return this.query[AppConfig.ArchiveNode.queryModuleName].runtime()
-    }
-
     public async static(options: ApiOptions): Promise<RuntimeFinder> {
         return new Promise<RuntimeFinder>((resolve) => {
             const instance = new RuntimeFinder(options)
             resolve(instance)
         })
+    }
+
+    public get runtime(): Promise<Codec> {
+        return this.query[AppConfig.ArchiveNode.queryModuleName].runtime()
     }
 
     protected async loadMeta(): Promise<boolean> {
