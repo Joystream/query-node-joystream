@@ -11,35 +11,34 @@ import { config as AppConfig } from "node-config-ts"
 // This is taken from @polkadot/types/Metadata/util/validateTypes.ts, where it's
 // currently unexported. This may be a brittle dependency!
 function extractTypes(types: string[]): any[] {
-  return types.map((type): any => {
-    const decoded = getTypeDef(type)
+    return types.map((type): any => {
+        const decoded = getTypeDef(type)
 
-    switch (decoded.info) {
-      case TypeDefInfo.Plain:
-        return decoded.type
+        switch (decoded.info) {
+            case TypeDefInfo.Plain:
+                return decoded.type
 
-      case TypeDefInfo.Compact:
-      case TypeDefInfo.Option:
-      case TypeDefInfo.Vec:
-        return extractTypes([(decoded.sub as TypeDef).type])
+            case TypeDefInfo.Compact:
+                case TypeDefInfo.Option:
+                case TypeDefInfo.Vec:
+                return extractTypes([(decoded.sub as TypeDef).type])
 
-      case TypeDefInfo.VecFixed:
-        return extractTypes([(decoded.ext as TypeDefExtVecFixed).type])
+            case TypeDefInfo.VecFixed:
+                return extractTypes([(decoded.ext as TypeDefExtVecFixed).type])
 
-      case TypeDefInfo.Tuple:
-        return extractTypes(
-          (decoded.sub as TypeDef[]).map((sub): string => sub.type),
-        )
+            case TypeDefInfo.Tuple:
+                return extractTypes( (decoded.sub as TypeDef[]).map((sub): string => sub.type))
 
-      default:
-        throw new Error(`Uhandled: Unnable to create and validate type from ${type}`)
-    }
-  })
+            default:
+                throw new Error(`Uhandled: Unnable to create and validate type from ${type}`)
+        }
+    })
 }
 
 function unregisteredTypes(types: string[]): string[] {
     const typeRegistry = getTypeRegistry()
-    return flattenUniq(extractTypes(types)).filter((type): boolean =>
+    return flattenUniq(
+        extractTypes(types)).filter((type): boolean =>
         !typeRegistry.hasType(type),
     )
 }
