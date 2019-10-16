@@ -19,6 +19,10 @@ import { StorageType } from "./StorageDescriptor"
 import { TrimString } from "./util"
 import { IResolver, IResolverIndex, isIResolver } from "./WASMInstance"
 
+// FIXME! Rename this
+import { TypeEnum } from "./CodecClassifierEnum"
+import { Type } from "./Type"
+
 type SDLSchemaFragment = string
 
 interface IStringIndex<T = string> {
@@ -110,29 +114,10 @@ export class TypeClassifier {
         return type
     }
 
-    public decodeEnum<T extends Enum>(type: string, codec: T, schema: SDLSchema): string {
-        const name = this.enumName(type)
-
-        if (schema.hasType(name)) {
-            return name
-        }
-
-        const ifaceName = "Enum"
-        if (!schema.hasInterface(ifaceName)) {
-            const iface = schema.interface(ifaceName)
-            iface.member("_enumType", "String")
-        }
-
-        const u = schema.type(name, ifaceName)
-        const raw = codec as unknown as IEnumTypes<any>
-
-        for (const key of Object.keys(raw._def)) {
-            u.member(key, this.codecToSDL(key, new raw._def[key](), schema))
-        }
-
-        u.member("_enumType", "String")
-
-        return name
+    public decodeEnum<T extends EnumType<any>>(type: string, codec: T, schema: SDLSchema): string {
+        const classifier = new TypeEnum()
+        // FIXME! Classifier won't work here. 
+        return classifier.codecToSDL(classifier, type, codec, schema)
     }
 
     public decodeStruct<T extends Struct>(name: string, s: T, schema: SDLSchema) {
@@ -173,6 +158,10 @@ export class TypeClassifier {
     }
 
     public codecToSDL<T extends Codec = Codec>(type: string, codec: T, schema: SDLSchema): SDLSchemaFragment {
+        const t = new Type()
+        return t.codecToSDL(t, type, codec, schema)
+        // FIXME! Delete this
+        /*
         for (let i = 0; i < CodecMapping.length; i++) {
             if (codec instanceof CodecMapping[i].codec) {
                 let value = CodecMapping[i].SDL
@@ -195,6 +184,7 @@ export class TypeClassifier {
         }
 
         return "CodecToSDLFailed" + type
+        */
     }
 
     public stringTypeToSDL(schema: SDLSchema, type: string): SDLSchemaFragment {
