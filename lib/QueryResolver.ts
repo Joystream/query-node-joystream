@@ -10,8 +10,9 @@ import { stringLowerFirst } from "@polkadot/util"
 import { ILogger } from "../lib/Logger"
 import { ModuleDescriptor, ModuleDescriptorIndex } from "./ModuleDescriptor"
 import { StorageDescriptor } from "./StorageDescriptor"
-import { IStructTypes } from "./TypeClassifier"
+import { IStructTypes } from "./CodecClassifierStruct"
 import { IResolver, IResolverIndex, isIResolver, WASMInstance } from "./WASMInstance"
+import { Type } from "./Type"
 
 interface IResolverCallbackArgs {
     block: number
@@ -27,11 +28,16 @@ export class QueryResolver {
     protected api: ApiPromise
     protected logger: ILogger
     protected executor: WASMInstance // FIXME! Map interace instead
+	protected rootType: Type
 
-    constructor(api: ApiPromise, logger: ILogger, queryRuntime: WASMInstance) {
+    constructor(api: ApiPromise, 
+				logger: ILogger, 
+				queryRuntime: WASMInstance, 
+				rootType: Type) {
         this.api = api
         this.logger = logger
         this.executor = queryRuntime
+		this.rootType = rootType
     }
 
     public typeValueToGraphQL(storage: StorageDescriptor, value: Codec): any {
@@ -136,22 +142,6 @@ export class QueryResolver {
     }
 
     protected serialiseCodec<T extends Codec>(codec: T): any {
-        if (codec instanceof Vec) {
-            return this.serialiseVector(codec)
-        }
-
-        if (codec instanceof Struct) {
-            return this.serialiseStruct(codec)
-        }
-
-        if (codec instanceof Tuple) {
-            return this.serialiseTuple(codec)
-        }
-
-        if (codec instanceof Enum) {
-            return this.serialiseEnum(codec)
-        }
-
         if (codec instanceof Date) {
             return codec.toJSON()
         }
@@ -161,52 +151,6 @@ export class QueryResolver {
             return codec.toJSON()
         }
 
-        return codec
-    }
-
-    protected serialiseEnum<T extends Enum>(e: T): any {
-        const output: any = {}
-        output[e.type] = this.serialiseCodec(e.value)
-        output._enumType = e.type
-        return output
-    }
-
-    protected serialiseVector<T extends Vec<any>>(v: T): any {
-        const output = []
-        const entries = v.toArray()
-
-        // tslint:disable-next-line
-        for (const k in entries) {
-            output.push(this.serialiseCodec(entries[k]))
-        }
-
-        return output
-    }
-
-    protected serialiseStruct<T extends Struct>(value: T): any {
-       const output: any = {}
-       const types = value as unknown as IStructTypes
-
-       for (const key of Object.keys(types._Types)) {
-            const raw = value.get(key)
-
-            if (typeof raw !== "undefined") {
-                output[key] = this.serialiseCodec(raw)
-            }
-        }
-
-       return output
-    }
-
-    protected serialiseTuple<T extends Tuple>(value: T): any {
-        const tupleEntries = value.toArray()
-        const entryOutput: any = {}
-
-        // tslint:disable-next-line
-        for (const i in value.Types) {
-            entryOutput[stringLowerFirst(value.Types[i])] = this.serialiseCodec(tupleEntries[i])
-        }
-
-        return entryOutput
+		return this.rootType.serialiseCodec(this.rootType, codec)
     }
 }

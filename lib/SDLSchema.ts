@@ -4,6 +4,8 @@ import { SDLUnionDef } from "./SDLUnionDef"
 
 const SDLTabSizeInSpaces = 4
 
+export type SDLSchemaFragment = string
+
 export interface ISDLSchemaLine {
     indent: number
     value: string

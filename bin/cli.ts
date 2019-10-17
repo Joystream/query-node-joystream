@@ -12,6 +12,14 @@ const fs = require("fs")
 import { App } from "../lib/App"
 import { RuntimeFinder } from "../lib/RuntimeFinder"
 import { WASMInstance } from "../lib/WASMInstance"
+import { DefaultCodecClassifier } from "../lib/CodecMapping"
+
+// Fixme! Register all these in an index file
+import { Enum, Struct, Tuple, Vec } from "@polkadot/types"
+import { TypeEnum } from "../lib/CodecClassifierEnum"
+import { TypeStruct } from "../lib/CodecClassifierStruct"
+import { TypeTuple } from "../lib/CodecClassifierTuple"
+import { TypeVec } from "../lib/CodecClassifierVec"
 
 // tslint:disable-next-line
 console.error = () => {}
@@ -33,6 +41,11 @@ function banner(logger: ILogger) {
     const queryBuffer = await finder.runtime
     const runtime = new WASMInstance(queryBuffer as unknown as  Uint8Array, finder, logger)
     finder.registerTypes(runtime.types())
+
+    DefaultCodecClassifier().registerMapping({codec: Enum, typeClass: TypeEnum})
+    DefaultCodecClassifier().registerMapping({codec: Struct, typeClass: TypeStruct})
+    DefaultCodecClassifier().registerMapping({codec: Tuple, typeClass: TypeTuple})
+    DefaultCodecClassifier().registerMapping({codec: Vec, typeClass: TypeVec})
 
     await new App(finder, logger, runtime).start()
 })().catch((err) => {
