@@ -8,6 +8,7 @@ import { GraphQLServerMetadataConfig } from "./GraphQLServerMetadataConfig"
 import { QueryResolver } from "./QueryResolver"
 import { TypeClassifier } from "./TypeClassifier"
 import { WASMInstance } from "./WASMInstance"
+import { Type } from "./Type"
 
 export class App {
     protected api: ApiPromise
@@ -23,9 +24,14 @@ export class App {
     }
 
     public async start() {
+		const rootType = new Type(this.typeRegistry)
         const config = new GraphQLServerMetadataConfig(
-            new QueryResolver(this.api, this.logger, this.queryRuntime),
-            new TypeClassifier(this.typeRegistry),
+            new QueryResolver(this.api, 
+							  this.logger, 
+							  this.queryRuntime,
+							  rootType,
+			),
+            new TypeClassifier(rootType),
             this.api.runtimeMetadata,
             this.queryRuntime,
         )

@@ -19,7 +19,7 @@ query-node-dev: node_modules
 .PHONY: regnerate-config
 regenerate-config: 
 	@yarn install
-	@yarn run regnerate-config
+	@yarn run regenerate-config
 
 .PHONY: git-submodules
 git-submodules:

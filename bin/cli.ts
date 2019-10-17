@@ -10,7 +10,16 @@ const chalk = require("chalk")
 const log = require("npmlog")
 const fs = require("fs")
 import { App } from "../lib/App"
+import { RuntimeFinder } from "../lib/RuntimeFinder"
 import { WASMInstance } from "../lib/WASMInstance"
+import { DefaultCodecClassifier } from "../lib/CodecMapping"
+
+// Fixme! Register all these in an index file
+import { Enum, Struct, Tuple, Vec } from "@polkadot/types"
+import { TypeEnum } from "../lib/CodecClassifierEnum"
+import { TypeStruct } from "../lib/CodecClassifierStruct"
+import { TypeTuple } from "../lib/CodecClassifierTuple"
+import { TypeVec } from "../lib/CodecClassifierVec"
 
 // tslint:disable-next-line
 console.error = () => {}
@@ -27,58 +36,18 @@ function banner(logger: ILogger) {
     const logger = new LoggerWrapper(log)
     banner(logger)
 
-    // FIXME! This will be loaded via an API request
-    const queryBuffer = fs.readFileSync("../query-api/build/query.wasm")
+    const finder = new RuntimeFinder({provider: new WsProvider(AppConfig.ArchiveNode.address)})
+    await finder.isReady
+    const queryBuffer = await finder.runtime
+    const runtime = new WASMInstance(queryBuffer as unknown as  Uint8Array, finder, logger)
+    finder.registerTypes(runtime.types())
 
-    // FIXME! Allow CLI-argument config for this
-    const api = await ApiPromise.create({
-        provider: new WsProvider(AppConfig.ArchiveNode.address),
-        types: {
-            // FIXME! Why aren't these registered?
-            CategoryId: "u64",
-            Category: `{"id": "CategoryId", "title": "Text", "description": "Text", "deleted": "bool", "archived": "bool"}`,
-            IPNSIdentity: {},
-            InputValidationLengthConstraint: "u64",
-            Post: {},
-            PostId: "u64",
-            ThreadId: "u64",
-            Thread: `{"id": "ThreadId", "title": "Text", "category_id": "CategoryId", "nr_in_category": "u32"}`,
-            Url: {},
-            Actor: {},
-            ContentId: {},
-            ContentMetadata: {},
-            ContentMetadataUpdate: {},
-            DataObject: {},
-            DataObjectStorageRelationship: {},
-            DataObjectStorageRelationshipId: {},
-            DataObjectType: {},
-            DataObjectTypeId: {},
-            TypeId: {},
-            DownloadSession: {},
-            DownloadSessionId: {},
-            ElectionStage: {},
-            MemberId: {},
-            PaidMembershipTerms: {},
-            PaidTermId: {},
-            Profile: {},
-            ProposalStatus: {},
-            Requests: {},
-            Role: {},
-            RoleParameters: {},
-            RuntimeUpgradeProposal: {},
-            SealedVote: {},
-            Seats: {},
-            Stake: {},
-            TallyResult: {},
-            TransferableStake: {},
-            UserInfo: {},
-            VoteKind: {},
-        },
-    })
+    DefaultCodecClassifier().registerMapping({codec: Enum, typeClass: TypeEnum})
+    DefaultCodecClassifier().registerMapping({codec: Struct, typeClass: TypeStruct})
+    DefaultCodecClassifier().registerMapping({codec: Tuple, typeClass: TypeTuple})
+    DefaultCodecClassifier().registerMapping({codec: Vec, typeClass: TypeVec})
 
-    const runtime = new WASMInstance(queryBuffer, api, logger)
-
-    await new App(api, logger, runtime).start()
+    await new App(finder, logger, runtime).start()
 })().catch((err) => {
     log.error("cli", err.stack)
     process.exit(1)

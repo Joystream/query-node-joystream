@@ -1,7 +1,9 @@
 import { Enum } from "@polkadot/types"
 import { Codec } from "@polkadot/types/types"
 import { SDLSchema } from "./SDLSchema"
-import { ICodecSDLClassifier, ICodecSerialiser, SDLSchemaFragment, Type } from "./Type"
+import { SDLSchemaFragment } from "./SDLSchema"
+import { ICodecSDLClassifier, ICodecSerialiser } from "./CodecMapping"
+import { Type } from "./Type"
 
 interface IStringIndex<T = string> {
     [index: string]: T
