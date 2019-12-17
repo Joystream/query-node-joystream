@@ -1,4 +1,4 @@
-![Query Nodes for Joystream](./banner.svg)
+![Query Nodes for Joystream](./query-node.svg)
 
 This is the work-in-progress version of the query node defined by the proposal at https://github.com/Joystream/joystream/issues/17. The query node acts as an GraphQL layer between Substrate full node RPC APIs and end-user applications that integrate with a Substrate chain. It's a decentralised API for the JoyStream ecosystem.
 
