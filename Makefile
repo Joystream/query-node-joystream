@@ -16,10 +16,10 @@ query-node: node_modules
 query-node-dev: node_modules
 	@yarn run dev
 
-.PHONY: regnerate-config
+.PHONY: regenerate-config
 regenerate-config: 
 	@yarn install
-	@yarn run regnerate-config
+	@yarn run regenerate-config
 
 .PHONY: git-submodules
 git-submodules:
